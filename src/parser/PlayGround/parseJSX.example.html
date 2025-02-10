@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple State Management with Signals</title>
+</head>
+<body>
+  <script>
+    function renderElement(node) {
+      if (typeof node === "string") {
+        return document.createTextNode(node);
+      }
+
+      const { tag, children = [], attributes = {} } = node;
+      const element = document.createElement(tag);
+
+      for (const [key, value] of Object.entries(attributes)) {
+        if (key.startsWith("on")) {
+          element[key.toLowerCase()] = new Function(value.slice(1, -1));
+        } else if (key === "style") {
+          // Object.assign(element.style, eval(value.slice(1, -1)));
+        } else {
+          element.setAttribute(key, value);
+        }
+      }
+
+      children.map(renderElement).forEach(child => element.appendChild(child));
+      return element;
+    }
+
+    const jsonStructure = {
+      "tag": "div",
+      "children": [
+        {
+          "tag": "h1",
+          "children": [
+            { "tag": "p" },
+            {
+              "tag": "strong",
+              "children": ["example."]
+            },
+            {
+              "tag": "span",
+              "attributes": {
+                "style": "{{color: 'red'}}"
+              },
+              "children": ["Deep inside"]
+            },
+            {
+              "tag": "button",
+              "attributes": {
+                "onClick": "{() => alert('Clicked!')}"
+              },
+              "children": ["Click Me"]
+            }
+          ]
+        }
+      ]
+    };
+
+    document.body.appendChild(renderElement(jsonStructure));
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,89 @@
+export type Token = { type: string; value: string };
+
+export const Tags = {
+    OPEN: '<open>',
+    CLOSE: '</close>'
+} as const
+
+export function tokenize(jsx: string): Token[] {
+    const tokens: Token[] = [];
+    let current = 0;
+    let currentTagElement: string | undefined;
+
+    while (current < jsx.length) {
+        let char = jsx[current];
+        // Match opening tag
+        if (char === '<') {
+            // Check if it's a closing tag
+            if (jsx[current + 1] === '/') {
+                current += 2; // Skip '</'
+                let tagName = '';
+                while (current < jsx.length && /[a-zA-Z0-9]/.test(jsx[current])) {
+                    tagName += jsx[current];
+                    current++;
+                }
+                tokens.push({ type: Tags.CLOSE, value: tagName });
+                current++; // Skip '>'
+                continue;
+            }
+ 
+            // Handle opening tag
+            current++;
+            let tagName = '';
+            while (current < jsx.length && /[a-zA-Z0-9]/.test(jsx[current])) {
+                tagName += jsx[current];
+                current++;
+            }
+            tokens.push({ type: Tags.OPEN, value: tagName });
+            currentTagElement = tagName;
+            continue;
+        }
+
+
+        // Match text children
+        if (!/\S/.test(char)) {
+            current++;
+            continue
+        }
+
+        let value = '';
+        while (current < jsx.length && jsx[current] !== '<') {
+            value += jsx[current];
+            current++;
+        }
+
+        value = value.replace('\n', '').trim()
+
+        if (value[0] === '>') {
+            value = value.substring(1)
+        }
+
+        if (value[value.length - 1] === '>') {
+            if(value[value.length - 2] === '/') {
+                value = value.substring(0, value.length - 2).trim()
+                tokens.push({ type: 'attributes', value });
+                tokens.push({ type: Tags.CLOSE, value: currentTagElement as string });
+                continue
+            }
+            value = value.substring(0, value.length - 1)
+            tokens.push({ type: 'attributes', value });
+            continue;
+        }
+
+        const [text, children] = value.split('>').filter(t => t.trim())
+        if (text && children) {
+            tokens.push({ type: 'attributes', value: text });
+            tokens.push({ type: 'children', value: children });
+            continue;
+        }
+
+        if (text) {
+            tokens.push({ type: 'children', value: text });
+            continue;
+        }
+
+        console.error("Syntax warning, not supported yet: " + value)
+
+    }
+    return tokens;
+}
