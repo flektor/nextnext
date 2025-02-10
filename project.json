@@ -1,0 +1,5 @@
+{
+  "root": "../app/",
+  "main": "index.html",
+  "output": "dist"
+}
