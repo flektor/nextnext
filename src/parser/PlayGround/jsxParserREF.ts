@@ -1,4 +1,4 @@
-import { tokenize, TokenType } from "./tokenizer";
+import { tokenize, TokenType } from "../tokenizer";
 
 export type Attributes = Record<string, string>;
 

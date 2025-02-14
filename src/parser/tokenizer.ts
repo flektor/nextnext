@@ -1,8 +1,10 @@
 export type Token = { type: string; value: string };
 
-export const Tags = {
-    OPEN: '<open>',
-    CLOSE: '</close>'
+export const TokenType = {
+    OPEN_TAG: '<open>',
+    CLOSE_TAG: '</close>',
+    ATTRIBUTES: 'attributes',
+    CONTENT: 'content',
 } as const
 
 export function tokenize(jsx: string): Token[] {
@@ -22,11 +24,11 @@ export function tokenize(jsx: string): Token[] {
                     tagName += jsx[current];
                     current++;
                 }
-                tokens.push({ type: Tags.CLOSE, value: tagName });
+                tokens.push({ type: TokenType.CLOSE_TAG, value: tagName });
                 current++; // Skip '>'
                 continue;
             }
- 
+
             // Handle opening tag
             current++;
             let tagName = '';
@@ -34,7 +36,7 @@ export function tokenize(jsx: string): Token[] {
                 tagName += jsx[current];
                 current++;
             }
-            tokens.push({ type: Tags.OPEN, value: tagName });
+            tokens.push({ type: TokenType.OPEN_TAG, value: tagName });
             currentTagElement = tagName;
             continue;
         }
@@ -59,26 +61,26 @@ export function tokenize(jsx: string): Token[] {
         }
 
         if (value[value.length - 1] === '>') {
-            if(value[value.length - 2] === '/') {
+            if (value[value.length - 2] === '/') {
                 value = value.substring(0, value.length - 2).trim()
-                tokens.push({ type: 'attributes', value });
-                tokens.push({ type: Tags.CLOSE, value: currentTagElement as string });
+                tokens.push({ type: TokenType.ATTRIBUTES, value });
+                tokens.push({ type: TokenType.CLOSE_TAG, value: currentTagElement as string });
                 continue
             }
             value = value.substring(0, value.length - 1)
-            tokens.push({ type: 'attributes', value });
+            tokens.push({ type: TokenType.ATTRIBUTES, value });
             continue;
         }
 
         const [text, children] = value.split('>').filter(t => t.trim())
         if (text && children) {
-            tokens.push({ type: 'attributes', value: text });
-            tokens.push({ type: 'children', value: children });
+            tokens.push({ type: TokenType.ATTRIBUTES, value: text });
+            tokens.push({ type:  TokenType.CONTENT, value: children });
             continue;
         }
 
         if (text) {
-            tokens.push({ type: 'children', value: text });
+            tokens.push({ type: TokenType.CONTENT, value: text });
             continue;
         }
 

@@ -15,7 +15,6 @@ app.get('/', (req: Request, res: Response) => {
 
 // const html = parseJSX('../../apps/pages/Home/Home.jsx')
 
-
 // Example usage
 const jsxCode = `<div class="container">
     <h1>Hello, World!</h1>
@@ -31,9 +30,9 @@ const jsxCode = `<div class="container">
 
 const parsedJSX = parseJSX(jsxCode)
 
-// renderElement(parsedJSX)
+// createElement(parsedJSX)
 
-// testSuite.run();
+testSuite.run();
 
 // console.log(html)
 

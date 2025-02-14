@@ -1,7 +1,7 @@
 
 
 import tinyTest from '../tinyTest'
-import { tokenize } from './tokenizer';
+import { tokenize, TokenType } from './tokenizer';
 
 
 // Example usage
@@ -23,21 +23,21 @@ tinyTest.describe('Testing the JSX tokenizer', () => {
             { type: '<open>', value: 'div' },
             { type: 'attributes', value: 'class="container"' },
             { type: '<open>', value: 'h1' },
-            { type: 'children', value: 'Hello, World!' },
+            { type: 'content', value: 'Hello, World!' },
             { type: '</close>', value: 'h1' },
             { type: '<open>', value: 'p' },
-            { type: 'children', value: '      This is a' },
+            { type: 'content', value: '      This is a' },
             { type: '<open>', value: 'strong' },
-            { type: 'children', value: 'nested' },
+            { type: 'content', value: 'nested' },
             { type: '</close>', value: 'strong' },
-            { type: 'children', value: 'example.' },
+            { type: 'content', value: 'example.' },
             { type: '<open>', value: 'span' },
             { type: 'attributes', value: "style={{color: 'red', bg: {calc()}}}" },
-            { type: 'children', value: 'Deep inside' },
+            { type: 'content', value: 'Deep inside' },
             { type: '</close>', value: 'span' },
             { type: '<open>', value: 'button' },
             { type: 'attributes', value: 'onClick={onClick} onChange={onChange}' },
-            { type: 'children', value: 'Click Me' },
+            { type: 'content', value: 'Click Me' },
             { type: '</close>', value: 'button' },
             { type: '<open>', value: 'button' },
             { type: 'attributes', value: 'onClick={onClick2}' },
