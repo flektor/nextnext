@@ -1,42 +1,122 @@
 import express, { Request, Response } from 'express';
-import { render } from './renderer';
-import { parseJSX } from './parser/jsxParser';
-import './parser/jsxParser.test';
-import './parser/tokenizer.test';
+import { createElement } from './element';
+import { parseJSX, type Node } from './parser/jsxParser';
+// import './parser/jsxParser.test';
+// import './parser/tokenizer.test';
 import testSuite from './tinyTest'
+import { parseJSFile } from './parser/babel/pureParser';
+import path from 'path';
+import fs from 'fs';
+
+import { tokenize, TokenType } from "./parser/tokenizer";
 
 const app = express();
 const port = 3000;
 
 app.get('/', (req: Request, res: Response) => {
-  res.send('Hello World!');
+
+  const html = `<!DOCTYPE html>
+    <html>
+    <body>
+        <script>
+            ${injectCreateElement()} 
+            ${page('/App.jsx')}
+            const app = App()
+            console.log(app)
+            document.body.append(app)
+        </script>
+    </body>
+    </html>`
+
+  res.send(html)
 });
 
+function customStringify(obj: Node) {
+  return JSON.stringify(obj, null, 2)
+    .replace(/("on[A-Z][a-zA-Z]*"):\s*"([^"]+)"/g, '$1: $2') // Keeps the key quoted but removes quotes from values
+    .replace(/"([^"]*{[^"]*})"/g, (_, content) =>
+      "`" + content.replace(/{/g, "${") + "`"
+    );
+}
 
-// const html = parseJSX('../../apps/pages/Home/Home.jsx')
+function findImports(fileContent: string) {
+  const importRegex = /import\s+(?:([\w*{}\s,]+)\s+from\s+)?['"]([^'"]+)['"]|const\s+([\w{}*]+)\s*=\s*require\(['"]([^'"]+)['"]\)/g;
+  const imports = []
+  let match;
+  while ((match = importRegex.exec(fileContent)) !== null) {
+    const name = match[1] || match[3] || "default"; // Imported names
+    const module = match[2] || match[4]; // Module name
+    //TODO adjust so it can import different names from diffrent places
+    //atm the last place that imports the resource overiddes the names imported
+    // +support 'somthing as somethingElse'
+    // imports.set(module, name.trim());
+    imports.push({ name: name.trim(), module });
+  }
 
-// Example usage
-const jsxCode = `<div class="container">
-    <h1>Hello, World!</h1>
-    <p>
-      This is a <strong>nested</strong> example.
-      <span style={{color: 'red', bg: {calc()}}}>Deep inside</span>
-      <button onClick={onClick} onChange={onChange}>Click Me</button>
-      <button onClick={onClick2} />
+  return imports;
+}
+// ? why different regex for import / clean ?
+function cleanImports(fileContent: string) {
+  return fileContent.replace(/^\s*(import\s+.*?['"];?|(?:const|let|var)\s+[\w{}*,\s]+\s*=\s*require\(['"][^'"]+['"]\);?)\s*$/gm, '');
+}
 
-    </p>
-  </div>`;
+// const imports = new Map<string, string>()
 
+function transformJSXToCreateElement(code: string) {
+  const imports = findImports(code)
 
-const parsedJSX = parseJSX(jsxCode)
+  code = cleanImports(code)
 
-// createElement(parsedJSX)
+  const jsxBlockRegex = /<([a-zA-Z][\w-]*)[^>]*>([^]*?)<\/\1>|<[a-zA-Z][\w-]*[^>]*\/>/gs;
 
-testSuite.run();
+  const element = code.replace(jsxBlockRegex, match => {
+    // console.log({ match })
+    try {
+      const tokens = tokenize(match).reverse();
+      if (tokens.length === 0) return ''
 
-// console.log(html)
+      const json = parseJSX(tokens)
+      if (!json) return ''
 
-// render();
+      const str = customStringify(json)
+
+      return `\ncreateElement(${str})`
+
+    } catch (error) {
+      console.error("Error processing JSX: ", match, error);
+      return match; // fallback to original if error occurs
+    }
+  });
+
+  return { element, imports };
+}
+
+function injectCreateElement() {
+  const createElementFilePath: string = path.join(__dirname, '/element.js');
+  const createElementCode = fs.readFileSync(createElementFilePath, 'utf-8');
+  return createElementCode.replace(/\bexport\b/g, '');
+}
+
+function page(filepath: string, root: boolean = true) {
+  const filePath: string = path.join(__dirname, filepath);
+  const code = fs.readFileSync(filePath, 'utf-8');
+
+  let { element, imports: tempImports } = transformJSXToCreateElement(code)
+  element = element.replace(/\bexport\b/g, '')
+
+  let fileContent = element;
+
+  for (const imp of tempImports) {
+    // const module = imports.get(imp.module)
+    // if (!module) continue;
+    const html = page(imp.module, false)
+    fileContent += '\n\n' + html
+  }
+  return fileContent
+}
+
+// testSuite.run();
+
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);

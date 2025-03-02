@@ -1,4 +1,4 @@
-import { tokenize, TokenType } from "./tokenizer";
+import { Token, TokenType } from "./tokenizer";
 
 export type Attributes = Record<string, string>;
 
@@ -8,13 +8,17 @@ export type Node = {
   children?: (string | Node)[];
 };
 
-export function parseJSX(jsx: string) {
-  const tokens = tokenize(jsx).reverse();
-  console.log(jsx, tokens)
-
+export function parseJSX(tokens: Token[]) {
+  // const parsedCode = reconstructCode(tokens)
+  // console.log(jsx, tokens, parsedCode)
+  // return parsedCode
   const stack: Node[] = [];
 
   const addChild = (parent: Node, child: Node | string) => {
+    if (!parent) {
+      return
+    }
+
     if (parent.children) {
       parent.children.push(child);
     } else {
@@ -22,9 +26,10 @@ export function parseJSX(jsx: string) {
     }
   }
 
-  while (true) {
+  while (tokens.length > 0) {
     const token = tokens.pop();
     if (!token) continue;
+
     let node: string | Node | undefined;
 
     switch (token.type) {
@@ -75,6 +80,6 @@ function parseAttributes(str: string) {
 
   // console.warn("TODO: FIX THIS")
   const [name, value] = str.split("=")
-  const clearedValue = value.replace(/^\\?["'`]|\\?["'`]$/g, '')
+  const clearedValue = value?.replace(/^\\?["'`]|\\?["'`]$/g, '')
   return { [name]: clearedValue || value }
-}
+} 

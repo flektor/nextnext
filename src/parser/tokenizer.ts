@@ -73,9 +73,14 @@ export function tokenize(jsx: string): Token[] {
         }
 
         const [text, children] = value.split('>').filter(t => t.trim())
+
+        if (!text) { 
+            continue;
+        }
+
         if (text && children) {
             tokens.push({ type: TokenType.ATTRIBUTES, value: text });
-            tokens.push({ type:  TokenType.CONTENT, value: children });
+            tokens.push({ type: TokenType.CONTENT, value: children });
             continue;
         }
 
@@ -84,7 +89,7 @@ export function tokenize(jsx: string): Token[] {
             continue;
         }
 
-        console.error("Syntax warning, not supported yet: " + value)
+        console.error("Syntax warning, not supported yet: ", { value })
 
     }
     return tokens;
