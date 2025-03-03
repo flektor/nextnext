@@ -3,7 +3,7 @@ export type Token = { type: string; value: string };
 export const TokenType = {
     OPEN_TAG: '<open>',
     CLOSE_TAG: '</close>',
-    ATTRIBUTES: 'attributes',
+    PROPS: 'props',
     CONTENT: 'content',
 } as const
 
@@ -63,12 +63,12 @@ export function tokenize(jsx: string): Token[] {
         if (value[value.length - 1] === '>') {
             if (value[value.length - 2] === '/') {
                 value = value.substring(0, value.length - 2).trim()
-                tokens.push({ type: TokenType.ATTRIBUTES, value });
+                tokens.push({ type: TokenType.PROPS, value });
                 tokens.push({ type: TokenType.CLOSE_TAG, value: currentTagElement as string });
                 continue
             }
             value = value.substring(0, value.length - 1)
-            tokens.push({ type: TokenType.ATTRIBUTES, value });
+            tokens.push({ type: TokenType.PROPS, value });
             continue;
         }
 
@@ -79,7 +79,7 @@ export function tokenize(jsx: string): Token[] {
         }
 
         if (text && children) {
-            tokens.push({ type: TokenType.ATTRIBUTES, value: text });
+            tokens.push({ type: TokenType.PROPS, value: text });
             tokens.push({ type: TokenType.CONTENT, value: children });
             continue;
         }

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <script>
+        // function customStringify(obj) {
+        //     return JSON.stringify(obj, (key, value) => value, 2) // Standard JSON stringify
+        //         .replace(/"on[A-Z][a-zA-Z]*":\s*"([^"]+)"/g, '$1: $2'); // Remove quotes from event handlers
+        // }
+        function createElement(node) {
+
+            if (typeof node === "string") {
+                return document.createTextNode(node);
+            }
+
+            const { tag, children = [], attributes = {} } = node;
+
+            const element = document.createElement(tag);
+            for (const [key, value] of Object.entries(attributes)) {
+                if (key.startsWith("on")) {
+                    element.setAttribute(key.toLowerCase(), `(${value})(event)`);
+                }
+
+                else if (key === "style") {
+                    try {
+                        const styleObject = JSON.parse(value); Object.assign(element.style, styleObject);
+                    } catch (error) { console.error("Invalid style JSON:", value); }
+                } else {
+                    element.setAttribute(key, value);
+                }
+            }
+
+            children.map(createElement).forEach(child => element.appendChild(child));
+            return element;
+        }
+
+        function Home({ isTrue }) {
+            const onClick = () => console.log('boom!');
+            const tempIsTrue = Math.random() > .5;
+            const tempIsTrue2 = Math.random() > .2;
+            const a = createElement({ "tag": "ul", "children": [{ "tag": "li", "children": ["first"] }, { "tag": "li", "children": ["\r second", { "tag": "div", "children": ["\r should support generic deep nesting"] }] }] })
+            // if (tempIsTrue) return a;
+            // else if (tempIsTrue2) { return 'hello there'; }
+            if (isTrue) return createElement({ "tag": "div", "children": ["nothing"] });
+            const one = 1;
+            return (createElement({ "tag": "div", "children": [{ "tag": "h1", "children": ["Home"] }, { "tag": "div", "children": [{ "tag": "div", "children": ["one: {one}"] }, { "tag": "p", "children": ["wadw da {something()}"] }] }, { "tag": "button", "attributes": { "onClick": onClick }, "children": ["Click me!"] }] }));
+        }
+        // function Home({ isTrue }) {
+        //     const something = () => 'Something!'
+        //     const onClick = () => console.log('boom!')
+        //     const tempIsTrue =
+        //         Math.random() > .5 // some conditions
+        //     const a = createElement({ "tag": "ul", "children": [{ "tag": "li", "children": ["first"] }, { "tag": "li", "children": ["\r second", { "tag": "div", "children": ["\r should support generic deep nesting"] }] }] })
+        //     // if (tempIsTrue) return a
+
+        //     if (isTrue) return createElement({ "tag": "div", "children": ["nothing"] })
+        //     return (createElement({ "tag": "div", "children": [{ "tag": "h1", "children": ["Home"] }, { "tag": "p", "children": [`wadw da ${something()}`] }, { "tag": "button", "attributes": { "onClick": onClick }, "children": ["Click me!"] }] }));
+        // }
+
+        const home = Home({ isTrue: false })
+        console.log(home)
+        document.body.append(home)
+    </script>
+</body>
+
+</html>

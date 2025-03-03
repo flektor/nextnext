@@ -1,14 +1,14 @@
 import { Token, TokenType } from "./tokenizer";
 
-export type Attributes = Record<string, string>;
+export type Props = Record<string, string>;
 
 export type Node = {
   tag: string;
-  attributes?: Attributes;
+  props?: Props;
   children?: (string | Node)[];
 };
 
-export function parseJSX(tokens: Token[]) {
+export function parseJsx(tokens: Token[]) : Node | undefined {
   // const parsedCode = reconstructCode(tokens)
   // console.log(jsx, tokens, parsedCode)
   // return parsedCode
@@ -53,30 +53,30 @@ export function parseJSX(tokens: Token[]) {
         addChild(stack[stack.length - 1], token.value)
         break;
 
-      case TokenType.ATTRIBUTES:
+      case TokenType.PROPS:
         node = stack[stack.length - 1]
         if (node) {
-          node.attributes = parseAttributes(token.value)
+          node.props = parseProps(token.value)
         }
     }
   }
 }
 
-function parseAttributes(str: string) {
+function parseProps(str: string) {
   if (!str) return
 
   const regex = /(\w+)\s*=\s*{(.*?)}(?=\s|$)/g;
-  const attributes: Attributes = {};
+  const props: Props = {};
   let match;
-  let hasAttributes = false;
+  let hasProps = false;
 
   while ((match = regex.exec(str)) !== null) {
     const [, key, value] = match
-    attributes[key] = value.trim()
-    hasAttributes = true
+    props[key] = value.trim()
+    hasProps = true
   }
 
-  if (hasAttributes) return attributes
+  if (hasProps) return props
 
   // console.warn("TODO: FIX THIS")
   const [name, value] = str.split("=")

@@ -1,11 +1,12 @@
-export function createElement(node) {
+import { type Node } from "./parser/jsxParser"
+
+export function createElement(node: string | Node) {
   if (typeof node === "string") {
     return document.createTextNode(node);
   }
-
-  const { tag, children = [], props = {} } = node;
+  const { tag, children = [], attributes = {} } = node;
   const element = document.createElement(tag);
-  for (const [key, value] of Object.entries(props)) {
+  for (const [key, value] of Object.entries(attributes)) {
 
     if (key.startsWith("on")) {
       element.setAttribute(key.toLowerCase(), `(${value})(event)`);
@@ -14,6 +15,7 @@ export function createElement(node) {
       try {
         const styleObject = JSON.parse(value);
         Object.assign(element.style, styleObject);
+        console.log(element)
       } catch (error) {
         console.error("Invalid style JSON:", value);
       }
@@ -21,7 +23,6 @@ export function createElement(node) {
       element.setAttribute(key, value);
     }
   }
-  
   children.map(createElement).forEach(child => element.appendChild(child));
   return element;
 }
