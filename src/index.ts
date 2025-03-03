@@ -18,6 +18,9 @@ function injectCreateElement() {
 export function indexPage() {
   return `<!DOCTYPE html>
   <html>
+  <head>
+    <link href="https://unpkg.com/tailwindcss@^1.2/dist/tailwind.min.css" rel="stylesheet">
+  </head>
   <body>
       <script>
           ${injectCreateElement()} 

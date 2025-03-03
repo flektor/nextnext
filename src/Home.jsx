@@ -1,6 +1,7 @@
 import { Button } from "./Button.jsx"
 
 export function Home({ isTrue }) {
+  console.log({ isTrue })
   const onClick = () => console.log('boom!')
   const something = () => "Something"
   const tempIsTrue = Math.random() > .5
@@ -19,8 +20,9 @@ export function Home({ isTrue }) {
   if (isTrue) return <div>nothing</div>
 
   const one = 1
+  console.log('home!', one)
 
-  return (<div>
+  return (<div class="flex justify-center bg-blue-500">
     <p>
       <h1>Home</h1>
       Something Else?
@@ -34,3 +36,17 @@ export function Home({ isTrue }) {
     </p>
   </div>)
 }
+
+
+/*
+
+TODO: Tackle Known Bugs
+
+[ ] Support multiple div elements. Something is wrong with the root?
+[ ] Support 
+
+
+  <head>
+    <link href="https://unpkg.com/tailwindcss@^1.2/dist/tailwind.min.css" rel="stylesheet">
+  </head>
+*/
