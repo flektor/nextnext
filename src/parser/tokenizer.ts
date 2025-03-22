@@ -72,7 +72,7 @@ export function tokenize(jsx: string): Token[] {
             continue;
         }
 
-        const [text, children] = value.split('>').filter(t => t.trim())
+        const [text, children] = value.trim().split('>')
 
         if (!text) { 
             continue;
