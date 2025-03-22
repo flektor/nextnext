@@ -1,7 +1,4 @@
 import express, { Request, Response } from 'express';
-// import './parser/jsxParser.test';
-// import './parser/tokenizer.test';
-import testSuite from './tinyTest'
 import { importComponent } from './jsxFileReader';
 import path from 'path';
 import fs from 'fs'
@@ -15,7 +12,7 @@ function injectCreateElement() {
   return createElementCode.replace(/\bexport\b/g, '');
 }
 
-export function indexPage() {
+function indexPage() {
   return `<!DOCTYPE html>
   <html>
   <head>
@@ -38,8 +35,6 @@ export function indexPage() {
 app.get('/', (req: Request, res: Response) => {
   res.send(indexPage())
 });
-
-// testSuite.run();
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);

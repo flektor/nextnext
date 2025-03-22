@@ -15,7 +15,7 @@
   "scripts": {
     "start": "nodemon",
     "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "ts-node ./src/tinyTest/run.ts"
   },
   "dependencies": {
     "express": "^4.18.2",
