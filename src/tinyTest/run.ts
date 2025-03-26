@@ -2,12 +2,11 @@ import { readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import testSuite from './index'
 
-const TEST_FILENAME_REGEX = /\.test\.(ts|js)$/  
+const TEST_FILENAME_REGEX = /\.test\.(ts|js)$/
 
 export const findAllTestFiles = (dir: string): string[] => {
   let results: string[] = []
   const files = readdirSync(dir)
-
   files.forEach(file => {
     const filePath = join(dir, file)
 
@@ -22,9 +21,6 @@ export const findAllTestFiles = (dir: string): string[] => {
 }
 
 const testFiles = findAllTestFiles(join(__dirname, '..'))
-
-testFiles.forEach(file => {
-  require(file)
-})
+testFiles.forEach(file => require(file))
 
 testSuite.run()
