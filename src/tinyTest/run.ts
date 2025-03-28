@@ -1,6 +1,8 @@
 import { readdirSync, statSync } from 'fs'
 import { join } from 'path'
-import testSuite from './index'
+import tinyTest, { Logger } from './index'
+import { TestLog } from './types'
+import { beautifyTestLog } from './helpers'
 
 const TEST_FILENAME_REGEX = /\.test\.(ts|js)$/
 
@@ -23,4 +25,8 @@ export const findAllTestFiles = (dir: string): string[] => {
 const testFiles = findAllTestFiles(join(__dirname, '..'))
 testFiles.forEach(file => require(file))
 
-testSuite.run()
+const logger = new Logger({
+  onLog: (log: TestLog) => console.log(beautifyTestLog(log))
+})
+
+tinyTest.runAllTests(logger)

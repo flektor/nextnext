@@ -1,10 +1,6 @@
-import { beautify, colorize, diffHighlight } from "./helpers"
-import { TestDescription, Test, TestCase, FinishedTest } from "./types"
+import { TestDescription, Test, TestCase, FinishedTest, TestLog, TestCaseLog, TestResultsLog, TestTreeMap } from "./types"
 
-class TinyTest {
-  tests: Test[] = []
-  currentDescription: TestDescription | undefined
-
+export class TinyTest {
   test(name: string, fn: VoidFunction) {
     this.tests.push({ name, fn, type: "test", parent: this.currentDescription })
   }
@@ -26,17 +22,12 @@ class TinyTest {
     this.tests.push(newDescription)
     this.currentDescription = newDescription
 
-    try {
-      fn()
-    } finally {
-      this.currentDescription = previousDescription
-    }
+    fn()
+    this.currentDescription = previousDescription
   }
 
   assert(condition: boolean, message = "Assertion failed!") {
-    if (!condition) {
-      throw new Error(message)
-    }
+    if (!condition) throw new AssertionError(message, condition)
   }
 
   assertEqual(actual: any, expected: any, message = "") {
@@ -46,103 +37,122 @@ class TinyTest {
       if (JSON.stringify(actual) === JSON.stringify(expected)) {
         return
       }
-
-      throw new Error(`Assertion failed:\n\n${message}\n${diffHighlight(expected, actual)}\n`)
+      throw new EqualityAssertionError(message, expected, actual)
     }
 
     if (actual !== expected) {
-      throw this.createAssertionFailedError(actual, expected, message)
+      throw new EqualityAssertionError(message, expected, actual)
     }
   }
 
-  createAssertionFailedError(actual: any, expected: any, message: string) {
-    const expectedValue = `Expected value: ${colorize(beautify(expected)).red()}`;
-    const actualValue = `Actual value: ${colorize(beautify(actual)).green()}`;
-    return new Error(`${colorize('Assertion failed!').red()} ${message}\n\n${expectedValue}\n\n${actualValue}\n`);
-  }
+  runTest(test: TestCase, depth: number): TestLog | Error {
+    try { test.fn() } catch (e) { var error = e }
 
-  buildTestTree = () => {
-    const tree = new Map<TestDescription | undefined, Test[]>();
-
-    for (const test of this.tests) {
-      const parent = test.parent || undefined;
-      if (!tree.has(parent)) {
-        tree.set(parent, []);
-      }
-      tree.get(parent)!.push(test);
+    const result: TestLog = {
+      type: test.type,
+      name: test.name,
+      depth,
     }
 
-    return tree;
-  };
+    if (!error) {
+      return result
+    }
 
-  run() {
-    let passedCount = 0;
-    let failedCount = 0;
+    if (error instanceof AssertionError || error instanceof EqualityAssertionError) {
+      return { ...result, error }
+    }
 
-    const runTest = (test: TestCase, depth: number) => {
-      try {
-        test.fn();
-        passedCount++;
-        console.log("  ".repeat(depth) + `✅ ${colorize(test.name).green()}`);
-      } catch (error: any) {
-        failedCount++;
-        console.log("  ".repeat(depth) + `❌ ${colorize(`${test.name} - `).red()}${error.message}`);
-      }
-    };
+    return new Error(JSON.stringify(error))
+  }
 
-    const executeTests = (parent: TestDescription | undefined = undefined, depth = 0) => {
-      const tests = testTree.get(parent) || [];
+  runAllTests(logger: Logger) {
+    const testTree = this.buildTestTree(this.tests)
+
+    const executeAllTests = (parent: TestDescription | undefined = undefined, depth = 0) => {
+      const tests = testTree.get(parent) || []
 
       for (const test of tests) {
-        if (test.type === "description") {
-          console.log(`${"  ".repeat(depth)}📂 ${test.name}`);
-          const previousDescription = this.currentDescription;
-          this.currentDescription = test;
-
-          executeTests(test, depth + 1);
-
-          this.currentDescription = previousDescription;
-        } else if (test.type === "test") {
-          runTest(test, depth + 1);
+        if (test.type === "test") {
+          const result = this.runTest(test, depth + 1) as TestCaseLog
+          result.error ? failed++ : passed++
+          logger.log(result)
+          continue
         }
+        // otherwise  type === 'description'
+        logger.log({
+          type: test.type,
+          name: test.name,
+          depth,
+        } as TestLog)
+
+        const previousDescription = this.currentDescription
+        this.currentDescription = test
+        executeAllTests(test, depth + 1)
+        this.currentDescription = previousDescription
       }
-    };
+    }
 
-    console.log("Running tests...\n");
+    let passed = 0
+    let failed = 0
 
-    const testTree = this.buildTestTree();
-    executeTests();
+    logger.log("Running tests...")
 
-    console.log(`\n✅ Passed: ${passedCount}`);
-    console.log(`❌ Failed: ${failedCount}`);
+    executeAllTests()
+
+    logger.log({ passed, failed, type: 'results' } as TestResultsLog)
   }
 
-  getFullDescription(test: Test): string {
-    let description = ""
-    let current = test.parent
-    while (current) {
-      const updatedDescription = `${current.name + "\n  " + description}`
-      description = description ? updatedDescription : current.name
-      current = current.parent
+  private tests: Test[] = []
+  private currentDescription: TestDescription | undefined
+
+  private buildTestTree(tests: Test[]) {
+    const tree: TestTreeMap = new Map()
+
+    for (const test of tests) {
+      const parent = test.parent || undefined
+      if (!tree.has(parent)) {
+        tree.set(parent, [])
+      }
+      tree.get(parent)!.push(test)
     }
 
-    return description
+    return tree
+  }
+}
+
+export class Logger {
+  logs: any[] = []
+  callback: Function
+
+  constructor({ onLog }: { onLog: Function }) {
+    this.callback = onLog
   }
 
-  orderedTests: Set<FinishedTest> = new Set()
+  log(...params: any[]) {
+    this.logs.push({ ...params })
+    this.callback(...params)
+  }
+}
 
-  orderTest(test: Test) {
-    const ancestorsStack = []
-    let current = test.parent
+export class AssertionError extends Error {
+  condition: boolean;
 
-    while (current) {
-      ancestorsStack.push(current)
-      current = current.parent
-    }
+  constructor(message: string, condition: boolean) {
+    super(message);
+    this.name = "AssertionError";
+    this.condition = condition;
+  }
+}
 
-    if (current) {
-      this.orderedTests.add(current)
-    }
+export class EqualityAssertionError extends Error {
+  expected: any;
+  actual: any;
+
+  constructor(message: string, expected: any, actual: any) {
+    super(message);
+    this.name = "EqualityAssertionError";
+    this.expected = expected;
+    this.actual = actual;
   }
 }
 
