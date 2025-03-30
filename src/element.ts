@@ -1,6 +1,6 @@
-import { type Node } from "./parser/jsxParser"
+import { type ElementNode } from "./parser/jsxParser"
 
-export function createElement(node: string | Node) {
+export function createElement(node: string | ElementNode) {
   if (typeof node === "string") {
     return document.createTextNode(node);
   }

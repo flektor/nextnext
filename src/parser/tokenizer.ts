@@ -5,9 +5,10 @@ export const TokenType = {
     CLOSE_TAG: '</close>',
     PROPS: 'props',
     CONTENT: 'content',
+    REACTIVE_CONTENT: 'reactive',
 } as const
 
-export function tokenize(jsx: string): Token[] {
+export function tokenize(jsx: string, signals: string[]): Token[] {
     const tokens: Token[] = [];
     let current = 0;
     let currentTagElement: string | undefined;
@@ -74,7 +75,7 @@ export function tokenize(jsx: string): Token[] {
 
         const [text, children] = value.trim().split('>')
 
-        if (!text) { 
+        if (!text) {
             continue;
         }
 
@@ -85,7 +86,9 @@ export function tokenize(jsx: string): Token[] {
         }
 
         if (text) {
-            tokens.push({ type: TokenType.CONTENT, value: text });
+            const hasEffect = signals && isReactive(text, signals)
+            const  type =  hasEffect ? TokenType.REACTIVE_CONTENT : TokenType.CONTENT
+            tokens.push({ type, value: text });
             continue;
         }
 
@@ -93,4 +96,15 @@ export function tokenize(jsx: string): Token[] {
 
     }
     return tokens;
+}
+
+
+function isReactive(text: string, signals: string[]) {
+    for (const signal of signals) {
+        if (text.includes(signal)) {
+            return true
+        }
+    }
+
+    return false
 }

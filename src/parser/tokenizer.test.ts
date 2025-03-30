@@ -1,9 +1,9 @@
-import tinyTest from "../tinyTest"
-import { tokenize, TokenType } from "./tokenizer";
+import { describe, it, assertEqual } from '../tinyTest'
+import { tokenize } from "./tokenizer"
 
-tinyTest.describe("Testing the JSX tokenizer", () => {
+describe("Testing the JSX tokenizer", () => {
  
-  tinyTest.it("extracts the correct tokens from a simple jsx code", () => {
+  it("extracts the correct tokens from a simple jsx code", () => {
 
     const jsxCode = `
       <div class="container">
@@ -12,7 +12,7 @@ tinyTest.describe("Testing the JSX tokenizer", () => {
           <div>
             <p>
               <h1> This is a <strong>nested</strong> example. </h1>
-              <span style={{color: "red", bg: {calc()}}}>Deep inside</span>
+              <span style={{color: "red", bg: {calc()}}}>Deep nested</span>
             </p>
             <div class="bg-gray-500 flex gap-4">
               <h2> A few component variations! </h2>
@@ -54,7 +54,7 @@ tinyTest.describe("Testing the JSX tokenizer", () => {
       { type: "</close>", value: "h1" },
       { type: "<open>", value: "span" },
       { type: "props", value: "style={{color: \"red\", bg: {calc()}}}" },
-      { type: "content", value: "Deep inside" },
+      { type: "content", value: "Deep nested" },
       { type: "</close>", value: "span" },
       { type: "</close>", value: "p" },
       { type: "<open>", value: "div" },
@@ -101,6 +101,6 @@ tinyTest.describe("Testing the JSX tokenizer", () => {
     ]
 
     const tokens = tokenize(jsxCode)
-    tinyTest.assertEqual(tokens, expectedTokens)
+    assertEqual(tokens, expectedTokens)
   })
 })

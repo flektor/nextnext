@@ -2,19 +2,34 @@ import { Token, TokenType } from "./tokenizer";
 
 export type Props = Record<string, string>;
 
-export type Node = {
+export type ElementNode = {
+  type: 'element'
   tag: string;
   props?: Props;
-  children?: (string | Node)[];
-};
+  children?: Node[];
+}
 
-export function parseJsx(tokens: Token[]) : Node | undefined {
+export type TextNode = {
+  type: 'text'
+  value: string
+}
+
+export type ReactiveNode = {
+  type: 'reactive'
+  value: string
+}
+
+export type Node = ElementNode | ReactiveNode | TextNode
+
+
+
+export function parseJsx(tokens: Token[], signals: string[]): ElementNode | undefined {
   // const parsedCode = reconstructCode(tokens)
   // console.log(jsx, tokens, parsedCode)
   // return parsedCode
-  const stack: Node[] = [];
+  const stack: ElementNode[] = [];
 
-  const addChild = (parent: Node, child: Node | string) => {
+  const addChild = (parent: ElementNode, child: Node) => {
     if (!parent) {
       return
     }
@@ -26,15 +41,20 @@ export function parseJsx(tokens: Token[]) : Node | undefined {
     }
   }
 
+  function convertToStringLitteral(str: string) {
+    return `\`${str.replace(/{([^{}]+)}/g, (_, expr) => `\${${expr}}`)}\``;
+  }
+
+
   while (tokens.length > 0) {
     const token = tokens.pop();
     if (!token) continue;
 
-    let node: string | Node | undefined;
+    let node: Node | undefined;
 
     switch (token.type) {
       case TokenType.OPEN_TAG:
-        stack.push({ tag: token.value })
+        stack.push({ tag: token.value, type: 'element' })
         break;
 
       case TokenType.CLOSE_TAG:
@@ -50,7 +70,14 @@ export function parseJsx(tokens: Token[]) : Node | undefined {
         break;
 
       case TokenType.CONTENT:
-        addChild(stack[stack.length - 1], token.value)
+        addChild(stack[stack.length - 1], { type: 'text', value: token.value })
+        break;
+
+      case TokenType.REACTIVE_CONTENT:
+        addChild(stack[stack.length - 1], {
+          type: 'reactive',
+          value: convertToStringLitteral(token.value)
+        })
         break;
 
       case TokenType.PROPS:

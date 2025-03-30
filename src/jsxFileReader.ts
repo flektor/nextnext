@@ -1,7 +1,13 @@
-import path from 'path';
+import path, { normalize } from 'path';
 import fs from 'fs';
 import { tokenize } from "./parser/tokenizer";
-import { parseJsx, Props, type Node } from './parser/jsxParser';
+import { parseJsx, Props, type ElementNode } from './parser/jsxParser';
+
+const logger = (enabled = true) => ({
+  log: (...params: any[]) => enabled && console.log(...params)
+})
+
+const { log } = logger(false)
 
 export function importComponent(filepath: string, root: boolean = true) {
   const filePath: string = path.join(__dirname, filepath);
@@ -9,14 +15,10 @@ export function importComponent(filepath: string, root: boolean = true) {
 
   let { element, imports: tempImports } = transformJsxToCreateElement(code)
   element = element.replace(/\bexport\b/g, '')
-
   let fileContent = element;
 
   for (const imp of tempImports) {
-    // const module = imports.get(imp.module)
-    // if (!module) continue;
-    const js = importComponent(imp.module, false)
-    fileContent += '\n\n' + js
+    fileContent += '\n\n' + importComponent(imp.module, false)
   }
   return fileContent
 }
@@ -26,7 +28,6 @@ const Regex = {
   JSX_MATCHER: /<([a-zA-Z][\w-]*)[^>]*>([^]*?)<\/\1>|<[a-zA-Z][\w-]*[^>]*\/>/gs,
   COMPONENT_TAG: /^[A-Z].*/,
 } as const
-
 
 function findImports(fileContent: string) {
   const imports = []
@@ -42,39 +43,97 @@ function findImports(fileContent: string) {
   }
 
   return imports
-} 
+}
 
-// const imports = new Map<string, string>()
+const isComponentNode = (node: ElementNode) => !!node.tag.match(Regex.COMPONENT_TAG)
+
+function createComponent(node: ElementNode) {
+  if (!node.props) return `new ${node.tag}()`;
+
+  const componentProps = removeQuotesFromKeysAndValues(node.props)
+
+  return `new ${node.tag}(${componentProps})`
+}
+
+function createElement(node: ElementNode, refs: Ref[], signals: any) {
+  if (isComponentNode(node)) {
+    return createComponent(node)
+  }
+
+  // else is html element
+  const elementProps = convertValuesWithRefsToStringLitterals(node)
+
+  if (!node.children) {
+
+    // console.log({ refs, effects: node.effects })
+    let output = `\ncreateElement(${elementProps}, this`
+    output += `, ${refs ? JSON.stringify(refs) : 'null'}`
+    output += ', null'
+    // console.log({ output })
+    return output + ')'
+  }
+
+  for (let child of node.children) {
+    if (child.type === 'text' || child.type === 'reactive') continue
+
+
+    if (isComponentNode(node)) {
+      child = { type: 'text', value: createComponent(node) }
+      continue
+    }
+
+    if (child.type === 'element')
+      for (let grandchild of child.children ?? []) {
+        if (grandchild.type !== "element") continue;
+
+        grandchild.children?.forEach(grandchild => {
+
+          if (grandchild.type == "element") {
+            const grandChildElement = createElement(grandchild, refs, signals)
+            if (grandChildElement) {
+              grandchild = { type: 'text', value: grandChildElement }
+            }
+          }
+        })
+      }
+  }
+
+  let output = `\ncreateElement(${elementProps}, this`
+  output += `, ${refs ? JSON.stringify(refs) : 'null'}, null`
+  return output + ', effect)'
+}
 
 function transformJsxToCreateElement(code: string) {
   const imports = findImports(code)
+
+  const { signals, refs } = extractSignalsAndRefs(code);
+  // console.log("Extracted signals:", signals);
+  // console.log("Extracted refs:", refs);
 
   code = code.replace(Regex.IMPORTS_MATCHER, '')
 
   const element = code.replace(Regex.JSX_MATCHER, match => {
     try {
-      const tokens = tokenize(match).reverse()
+      const tokens = tokenize(match, signals).reverse()
+      // console.log(tokens)
       if (tokens.length === 0) return '';
 
-      const ast = parseJsx(tokens)
-      if (!ast) return '';
+      for (const token of tokens) {
+        for (const signal of signals) {
 
-      const isComponent = ast.tag.match(Regex.COMPONENT_TAG)
-      console.log({ tag: ast.tag, isComponent })
-
-      if (isComponent) {
-        if (!ast.props) return `${ast.tag}()`;
-
-        const componentProps = removeQuotesFromKeysAndValues(ast.props)
-        return `${ast.tag}(${componentProps})`
+          if (token.value.includes(signal)) {
+            token.value = token.value.replace(signal, `this.${signal}`).trim()
+          }
+        }
       }
-      // else is html element
-      const elementProps = convertValuesWithRefsToStringLitterals(ast)
-      return `\ncreateElement(${elementProps})`
+
+      const ast = parseJsx(tokens, signals)
+      if (!ast) return '';
+      return createElement(ast, refs as any, signals)
 
     } catch (error) {
       console.error("Error processing JSX: ", match, error)
-      return match; // fallback to original if error occurs
+      return match
     }
   });
 
@@ -86,7 +145,7 @@ function removeQuotesFromKeysAndValues(object: Object) {
   return JSON.stringify(object).replace(/:\s*"([^"]+)"/g, ': $1'); // Remove quotes 
 }
 
-function convertValuesWithRefsToStringLitterals(obj: Node) {
+function convertValuesWithRefsToStringLitterals(obj: ElementNode) {
   // convert prop values to string litterals if needed, so we can pass variables or functions references
   return JSON.stringify(obj, null, 2)
     .replace(/("on[A-Z][a-zA-Z]*"):\s*"([^"]+)"/g, '$1: $2') // Keeps the key quoted but removes quotes from values
@@ -94,3 +153,86 @@ function convertValuesWithRefsToStringLitterals(obj: Node) {
       "`" + content.replace(/{/g, "${") + "`"
     );
 }
+
+const signalRegex = /\bthis\.(\w+)\s*=\s*createSignal\(/g;
+
+// const signalRegex = /\b(?:const|let|var)\s+(\w+)\s*=\s*createSignal\(/g;
+// const signalRegex = /const\s*\[([^,\]]+)(?:,\s*([^,\]]+))?\]\s*=\s*createSignal\(/g;
+const refRegex = /const\s+(\w+)\s*=\s*createRef\(/g;
+const jsxExpressionRegex = /\{([^}]+)\}/g;
+
+type SignalScope = {
+  name: string;
+  setter?: string;
+  scopeLevel: number;
+};
+
+type RefScope = {
+  name: string;
+  scopeLevel: number;
+};
+
+function extractSignalsAndRefs(code: string): { signals: string[]; refs: string[]; usages: string[] } {
+  const lines = code.split("\n");
+
+  let scopeLevel = 0;
+  const signals: SignalScope[] = [];
+  const refs: RefScope[] = [];
+  const usages: string[] = [];
+
+  for (const line of lines) {
+    if (line.includes("{")) scopeLevel++;
+    if (line.includes("}")) scopeLevel--;
+
+    let match;
+    while ((match = signalRegex.exec(line)) !== null) {
+      const name = match[1].trim();
+      const setter = match[2]?.trim();
+      if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name)) {
+        signals.push({ name, setter, scopeLevel });
+      }
+    }
+
+    while ((match = refRegex.exec(line)) !== null) {
+      const name = match[1].trim();
+      if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name)) {
+        refs.push({ name, scopeLevel });
+      }
+    }
+
+    while ((match = jsxExpressionRegex.exec(line)) !== null) {
+      const expression = match[1].trim();
+      signals.forEach((signal) => {
+        const regex = new RegExp(`\\b${signal.name}\\s*\\(\\s*\\)`, "g"); // Match function calls only
+        if (regex.test(expression)) {
+          usages.push(signal.name);
+        }
+      });
+    }
+  }
+
+  return {
+    signals: signals.map((s) => s.name),
+    refs: refs.map((r) => r.name),
+    usages: [...new Set(usages)] // Ensure unique matches
+  };
+}
+
+
+type Ref = {
+  current: null
+}
+
+
+// type Ref<T> = {
+//   current: T | null
+// }
+
+
+// function attachRef<T extends HTMLElement>(ref: Ref<HTMLElement>, element: T) {
+//   ref.current = element
+// }
+
+
+
+
