@@ -20,7 +20,7 @@
     ],
     "include": [
         "src/**/*"
-, "tinyTest.ts"    ],
+, "tinyTest.ts", "app"    ],
     "exclude": [
         "node_modules"
     ]

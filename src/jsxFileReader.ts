@@ -1,6 +1,6 @@
 import path, { normalize } from 'path';
 import fs from 'fs';
-import { tokenize } from "./parser/tokenizer";
+import { Token, tokenize } from "./parser/tokenizer";
 import { parseJsx, Props, type ElementNode } from './parser/jsxParser';
 
 const logger = (enabled = true) => ({
@@ -9,20 +9,26 @@ const logger = (enabled = true) => ({
 
 const { log } = logger(false)
 
-export function importComponent(filepath: string, root: boolean = true) {
-  const filePath: string = path.join(__dirname, filepath);
-  const code = fs.readFileSync(filePath, 'utf-8');
-
-  let { element, imports: tempImports } = transformJsxToCreateElement(code)
-  element = element.replace(/\bexport\b/g, '')
+export function importComponent(filepath: string, root: string = '') {
+  // If the filepath starts with ./ or ../, resolve it relative to the current file's directory.
+  if (filepath.charAt(0) === '.' || filepath.charAt(0) === '/') {
+    filepath = path.resolve(path.dirname(root), filepath);
+  }
+ 
+  // Read the content of the file.
+  const code = fs.readFileSync(filepath, 'utf-8'); 
+  // Assuming transformJsxToCreateElement is defined elsewhere
+  let { element, imports: tempImports } = transformJsxToCreateElement(code);
+  element = element.replace(/\bexport\b/g, '');
   let fileContent = element;
-
+ 
+  // For each import, recursively resolve it using the current file's directory
   for (const imp of tempImports) {
-    fileContent += '\n\n' + importComponent(imp.module, false)
+    fileContent += '\n\n' + importComponent(imp.module, filepath);
   }
   return fileContent
 }
-
+ 
 const Regex = {
   IMPORTS_MATCHER: /import\s+(?:([\w*{}\s,]+)\s+from\s+)?['"]([^'"]+)['"]|const\s+([\w{}*]+)\s*=\s*require\(['"]([^'"]+)['"]\)/g,
   JSX_MATCHER: /<([a-zA-Z][\w-]*)[^>]*>([^]*?)<\/\1>|<[a-zA-Z][\w-]*[^>]*\/>/gs,
@@ -61,7 +67,8 @@ function createElement(node: ElementNode, refs: Ref[], signals: any) {
   }
 
   // else is html element
-  const elementProps = convertValuesWithRefsToStringLitterals(node)
+
+  const elementProps = convertValuesWithRefsToStringLitterals(node, signals)
 
   if (!node.children) {
 
@@ -82,7 +89,7 @@ function createElement(node: ElementNode, refs: Ref[], signals: any) {
       continue
     }
 
-    if (child.type === 'element')
+    if (child.type === 'element') {
       for (let grandchild of child.children ?? []) {
         if (grandchild.type !== "element") continue;
 
@@ -96,6 +103,7 @@ function createElement(node: ElementNode, refs: Ref[], signals: any) {
           }
         })
       }
+    }
   }
 
   let output = `\ncreateElement(${elementProps}, this`
@@ -112,20 +120,20 @@ function transformJsxToCreateElement(code: string) {
 
   code = code.replace(Regex.IMPORTS_MATCHER, '')
 
+  // console.log(code)
+
+
+  //   code = code.replace(Regex.IMPORTS_MATCHER,match => {
+  //   console.log(match)
+  //   match.replace
+  //   return ''
+  // })
+
   const element = code.replace(Regex.JSX_MATCHER, match => {
     try {
       const tokens = tokenize(match, signals).reverse()
       // console.log(tokens)
       if (tokens.length === 0) return '';
-
-      for (const token of tokens) {
-        for (const signal of signals) {
-
-          if (token.value.includes(signal)) {
-            token.value = token.value.replace(signal, `this.${signal}`).trim()
-          }
-        }
-      }
 
       const ast = parseJsx(tokens, signals)
       if (!ast) return '';
@@ -140,24 +148,34 @@ function transformJsxToCreateElement(code: string) {
   return { element, imports }
 }
 
-
 function removeQuotesFromKeysAndValues(object: Object) {
   return JSON.stringify(object).replace(/:\s*"([^"]+)"/g, ': $1'); // Remove quotes 
 }
 
-function convertValuesWithRefsToStringLitterals(obj: ElementNode) {
+function convertValuesWithRefsToStringLitterals(obj: ElementNode, signals: string[]) {
   // convert prop values to string litterals if needed, so we can pass variables or functions references
   return JSON.stringify(obj, null, 2)
     .replace(/("on[A-Z][a-zA-Z]*"):\s*"([^"]+)"/g, '$1: $2') // Keeps the key quoted but removes quotes from values
-    .replace(/"([^"]*{[^"]*})"/g, (_, content) =>
-      "`" + content.replace(/{/g, "${") + "`"
+    .replace(/"([^"]*{[^"]*})"/g, (_, content) => {
+
+      for (const signal of signals) {
+        if (content.includes(signal)) {
+          content = (content as string).replace(new RegExp(`\\{([^}]*)\\b${signal}\\b([^}]*)\\}`, 'g'), (match, before, after) => {
+            return `{${before}this.${signal}${after}}`;
+          }).trim();
+        }
+      }
+
+      // console.log({ content })
+      return "`" + content.replace(/{/g, "${") + "`"
+    }
     );
 }
 
-const signalRegex = /\bthis\.(\w+)\s*=\s*createSignal\(/g;
+// const signalRegex = /\bthis\.(\w+)\s*=\s*createSignal\(/g;
 
 // const signalRegex = /\b(?:const|let|var)\s+(\w+)\s*=\s*createSignal\(/g;
-// const signalRegex = /const\s*\[([^,\]]+)(?:,\s*([^,\]]+))?\]\s*=\s*createSignal\(/g;
+const signalRegex = /const\s*\[([^,\]]+)(?:,\s*([^,\]]+))?\]\s*=\s*createSignal\(/g;
 const refRegex = /const\s+(\w+)\s*=\s*createRef\(/g;
 const jsxExpressionRegex = /\{([^}]+)\}/g;
 
@@ -232,7 +250,3 @@ type Ref = {
 // function attachRef<T extends HTMLElement>(ref: Ref<HTMLElement>, element: T) {
 //   ref.current = element
 // }
-
-
-
-
