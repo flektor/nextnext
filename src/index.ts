@@ -2,10 +2,13 @@ import path from 'path';
 import fs from 'fs';
 import { createServer } from 'http';
 import { importComponent } from './jsxFileReader';
-import { SSEServer } from './sseServer';
-import loadEnvironmentVariables from './utils/loadDotEnv'
+import { SSEServer } from './hot-reload/sseServer';
+import { loadEnvironmentVariables } from './utils/dotEnv';
+import { printNodeRunningEnvironmentMessage, printServerUrl } from './utils/logger';
 
-const { isDevMode } = loadEnvironmentVariables(path.join(__dirname, '../.env'))
+const { isDevMode, environment } = loadEnvironmentVariables(path.join(__dirname, '../.env'))
+
+printNodeRunningEnvironmentMessage(environment)
 
 const project = readProjectConfig();
 const appComponentPath = path.join(project.root, project.main)
@@ -30,9 +33,8 @@ fs.watch(project.root, { recursive: true }, (eventType, filename) => {
   }
 });
 
-const port = 3000;
-server.listen(port, () => {
-  console.log(`🚀 Server listening on http://localhost:${port}`);
+server.listen(process.env.PORT, () => {
+  printServerUrl(process.env.PORT, environment)
 });
 
 function indexPage(App: string) {
@@ -105,7 +107,7 @@ function injectStyles() {
 
 function injectSseClient() {
   if (isDevMode) {
-    const createElementFilePath = path.join(__dirname, 'sseClient.js');
+    const createElementFilePath = path.join(__dirname, 'hot-reload/sseClient.js');
     const createElementCode = fs.readFileSync(createElementFilePath, 'utf-8');
     const sseClientClassDefinition = createElementCode.replace(/\bexport\b/g, '');
 
