@@ -1,34 +1,28 @@
-import path, { normalize } from 'path';
+import path from 'path';
 import fs from 'fs';
-import { Token, tokenize } from "./parser/tokenizer";
+import { tokenize } from "./parser/tokenizer";
 import { parseJsx, Props, type ElementNode } from './parser/jsxParser';
-
-const logger = (enabled = true) => ({
-  log: (...params: any[]) => enabled && console.log(...params)
-})
-
-const { log } = logger(false)
 
 export function importComponent(filepath: string, root: string = '') {
   // If the filepath starts with ./ or ../, resolve it relative to the current file's directory.
   if (filepath.charAt(0) === '.' || filepath.charAt(0) === '/') {
     filepath = path.resolve(path.dirname(root), filepath);
   }
- 
+
   // Read the content of the file.
-  const code = fs.readFileSync(filepath, 'utf-8'); 
+  const code = fs.readFileSync(filepath, 'utf-8');
   // Assuming transformJsxToCreateElement is defined elsewhere
   let { element, imports: tempImports } = transformJsxToCreateElement(code);
   element = element.replace(/\bexport\b/g, '');
   let fileContent = element;
- 
+
   // For each import, recursively resolve it using the current file's directory
   for (const imp of tempImports) {
     fileContent += '\n\n' + importComponent(imp.module, filepath);
   }
   return fileContent
 }
- 
+
 const Regex = {
   IMPORTS_MATCHER: /import\s+(?:([\w*{}\s,]+)\s+from\s+)?['"]([^'"]+)['"]|const\s+([\w{}*]+)\s*=\s*require\(['"]([^'"]+)['"]\)/g,
   JSX_MATCHER: /<([a-zA-Z][\w-]*)[^>]*>([^]*?)<\/\1>|<[a-zA-Z][\w-]*[^>]*\/>/gs,
