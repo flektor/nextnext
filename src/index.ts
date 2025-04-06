@@ -40,7 +40,7 @@ function indexPage(App: string) {
   <html>
   <header>
     <style>
-      <link href="https://unpkg.com/tailwindcss@^1.2/dist/tailwind.min.css" rel="stylesheet">
+      ${injectStyles()}
     </style>
   </header>
   <body class='bg-primary' text='white'>
@@ -96,7 +96,13 @@ function injectSignals() {
   const createElementCode = fs.readFileSync(createElementFilePath, 'utf-8');
   return createElementCode.replace(/\bexport\b/g, '');
 }
- 
+
+function injectStyles() {
+  const createElementFilePath = path.join(__dirname, 'styles.css');
+  const createElementCode = fs.readFileSync(createElementFilePath, 'utf-8');
+  return createElementCode.replace(/\bexport\b/g, '');
+}
+
 function injectSseClient() {
   if (isDevMode) {
     const createElementFilePath = path.join(__dirname, 'sseClient.js');
