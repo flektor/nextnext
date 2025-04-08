@@ -35,30 +35,17 @@ export default function debug(__enabled = true, name?: string) {
 
 export function printServerUrl(port: string | undefined, mode: string) {
     if (port === undefined) {
-        return console.info(magenta(`Environment variable PORT is not defined\n Check .env file!`));
+        return console.log(magenta(`Environment variable PORT is not defined\n Check .env file!`));
     }
 
     const url = `http://localhost:${port}`
     switch (mode) {
         case 'production':
-            return console.info(green(` - listening on ${yellow(url)}`));
+            return console.log(green(` - listening on ${yellow(url)}`));
         case 'development':
-            return console.info(blue(` - listening on ${yellow(url)}`));
+            return console.log(blue(` - listening on ${yellow(url)}`));
         case 'test':
-            return console.info(yellow(` - listening on ${green(url)}`));
-    }
-}
-
-export function printNodeRunningEnvironmentMessage(mode: string): void {
-    switch (mode) {
-        case 'production':
-            return console.info(green(`🚀  Server runs in‼️  ${mode.toUpperCase()}‼️  mode`));
-        case 'development':
-            return console.info(blue(`🛠️  Server runs in ${mode} mode`));
-        case 'test':
-            return console.info(yellow(`🧪  Server runs in ${mode} mode`));
-        default:
-            return console.info(magenta(`🤷  Server runs in ${mode} mode`));
+            return console.log(yellow(` - listening on ${green(url)}`));
     }
 }
 
