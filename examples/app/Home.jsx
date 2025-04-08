@@ -50,7 +50,6 @@ export function Home({ isTrue }) {
 
   const [className, setClassName] = createSignal("text-4xl")
   
-
   const [buttonColor, setButtonColor] = createSignal("bg-blue-500")
 
   return (<div class="flex justify-center"> 
@@ -60,8 +59,7 @@ export function Home({ isTrue }) {
       <br></br>
 
       <p>
-        nested component construction delacration
-        <A></A>  
+        nested component construction delacration? ?
       </p>
       Something Else? {count()}
       <H2>Double count? {doubleCount()}</H2>

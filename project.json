@@ -1,5 +1,5 @@
 {
-  "root": "/home/flektor/apps/simple-js/server/app/",
+  "root": "/home/flektor/apps/simple-js/server/examples/app/",
   "main": "App.jsx",
   "output": "dist"
 }
