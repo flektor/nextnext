@@ -18,7 +18,7 @@ function restartServer() {
   console.log(blue('[watcher] Transpiling..'))
   require('child_process').execSync('tsc', { stdio: 'inherit' })
 
-  console.log(blue('[watcher] Server restarting..'))
+  console.log(blue('[watcher] Restarting server..'))
   startServer(true)
 }
 

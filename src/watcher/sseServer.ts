@@ -19,7 +19,6 @@ export class SSEServer {
     });
   }
 
-  // Send a named event to all clients
   send<T = any>(event: string, data: T): void {
     const formatted = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
     this.clients.forEach(client => {
@@ -27,7 +26,6 @@ export class SSEServer {
     });
   }
 
-  // Send default unnamed "message" event
   broadcast<T = any>(data: T): void {
     this.send('message', data);
   }
