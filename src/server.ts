@@ -12,7 +12,6 @@ const appComponentPath = path.join(project.root, project.main)
 
 const { isDevMode, environment } = loadEnvironmentVariables(path.join(__dirname, '../.env'))
 
-
 const args = process.argv.slice(2)
 const isRestart = args.includes('--restart')
 

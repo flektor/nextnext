@@ -8,10 +8,15 @@ export type ElementNode = {
   props?: Props;
   children?: Node[];
 }
-
+ 
 export type TextNode = {
   type: 'text'
   value: string
+}
+ 
+export type ComputedNode = {
+  type: 'computed'
+  value: Object
 }
 
 export type ReactiveNode = {
@@ -19,9 +24,7 @@ export type ReactiveNode = {
   value: string
 }
 
-export type Node = ElementNode | ReactiveNode | TextNode
-
-
+export type Node = ElementNode | ComputedNode | ReactiveNode | TextNode
 
 export function parseJsx(tokens: Token[], signals: string[]): ElementNode | undefined {
   // const parsedCode = reconstructCode(tokens)
@@ -44,7 +47,6 @@ export function parseJsx(tokens: Token[], signals: string[]): ElementNode | unde
   function convertToStringLitteral(str: string) {
     return `\`${str.replace(/{([^{}]+)}/g, (_, expr) => `\${${expr}}`)}\``;
   }
-
 
   while (tokens.length > 0) {
     const token = tokens.pop();
@@ -80,30 +82,48 @@ export function parseJsx(tokens: Token[], signals: string[]): ElementNode | unde
         })
         break;
 
+        case TokenType.COMPUTED_CONTENT:
+          addChild(stack[stack.length - 1], {
+            type: 'computed',
+            value: convertToStringLitteral(token.value)
+          })
+          break;
+
       case TokenType.PROPS:
         node = stack[stack.length - 1]
         if (node) {
-          node.props = parseProps(token.value)
+          node.props = parseProps(token.value, signals)
+
         }
     }
   }
 }
 
-function parseProps(str: string) {
+function parseProps(str: string, signals: string[]) {
   if (!str) return
 
   const regex = /(\w+)\s*=\s*{(.*?)}(?=\s|$)/g;
   const props: Props = {};
   let match;
-  let hasProps = false;
 
   while ((match = regex.exec(str)) !== null) {
-    const [, key, value] = match
+    const [prop, key, value] = match
     props[key] = value.trim()
-    hasProps = true
+    // console.log()
+    // if (isReactive(`{${value}}`, signals)) {
+    //   console.log({ prop: { [key]: value } })
+    // }
   }
 
-  if (hasProps) return props
+  // for (const prop in props) {
+  //   let value = props[prop]
+
+  //   if (isReactive(value, signals)) {
+  //     console.log({ prop: { [prop]: value } })
+  //   }
+  // }
+
+  if (Object.keys(props).length) return props
 
   // console.warn("TODO: FIX THIS")
   const [name, value] = str.split("=")

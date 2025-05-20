@@ -1,7 +1,7 @@
 
-import tinyTestInstance, { describe, it, assertEqual, assert, TinyTest, Logger } from '../tinyTest'
+import { describe, it, assertEqual, assert, TinyTest, Logger } from '../tinyTest'
 import { beautifyTestLog } from './helpers'
-import { Test, TestDescription, TestLog } from './types'
+import { TestLog } from './types'
 
 describe('TinyTest', () => {
 

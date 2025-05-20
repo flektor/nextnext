@@ -95,7 +95,7 @@ describe('Testing the JSX Parser', () => {
             }]
         } 
 
-        const parsedJSX = parseJsx(tokens)
+        const parsedJSX = parseJsx(tokens, [])
         assertEqual(parsedJSX, expectedOutput)
     })
 })

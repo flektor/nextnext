@@ -1,43 +1,30 @@
 import fs from "fs";
 import path from "path";
-import { importComponent } from "./jsxFileReader";
+import { importPage as importAppComponent } from "./jsxFileReader";
 
 export function indexPage(appComponentPath: string) {
-  const App = importComponent(appComponentPath)
+  const App = importAppComponent(appComponentPath)
 
   return `<!DOCTYPE html>
   <html>
-  <header>
+  <head>
     <style>
       ${injectStyles()}
     </style>
-  </header>
+  </head>
   <body class='bg-primary' text='white'>
   <script>
     "use strict";
     
     document.body.classList.toggle("dark")
 
-    
     ${injectSseClient()}
-    
     ${injectSignals()} 
-    ${injectCreateElement()} 
     ${injectCreateRef()} 
+    ${App}
 
-    let appElement;
-
-    function run() {
-      ${App}
-      if(appElement) {
-        document.body.removeChild(appElement)
-      } 
-      appElement = new App()
-      document.body.appendChild(appElement)
-    }
-
-    run()
-
+    document.body.appendChild(App())
+    
     </script>
   </body>
   </html>`;
@@ -53,12 +40,11 @@ function injectCreateRef() {
     return ref
   }`;
 }
-
-function injectCreateElement() {
-  const createElementFilePath = path.join(__dirname, './element.js');
-  const createElementCode = fs.readFileSync(createElementFilePath, 'utf-8');
-  return createElementCode.replace(/\bexport\b/g, '');
-}
+// function injectCreateElement() {
+//   const createElementFilePath = path.join(__dirname, './element.js');
+//   const createElementCode = fs.readFileSync(createElementFilePath, 'utf-8');
+//   return createElementCode.replace(/\bexport\b/g, '');
+// }
 
 function injectSignals() {
   const createElementFilePath = path.join(__dirname, './signals.js');
