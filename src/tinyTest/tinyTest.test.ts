@@ -9,7 +9,7 @@ describe('TinyTest', () => {
 
         describe('Assert the assert 😆', () => {
 
-            it('should not throw if the condition is true', () => {
+            it('does not throw if the condition is true', () => {
                 try {
                     assert(true)
                     var passed = true
@@ -21,7 +21,7 @@ describe('TinyTest', () => {
             })
 
 
-            it('should throw if the condition is false', () => {
+            it('throws if the condition is false', () => {
                 try {
                     assert(false)
                     var failed = false
@@ -38,7 +38,7 @@ describe('TinyTest', () => {
 
             describe('The arguments match', () => {
 
-                it('should not throw with: true, true', () => {
+                it('does not throw with: true, true', () => {
                     try {
                         assertEqual(true, true)
                         var passed = true
@@ -50,7 +50,7 @@ describe('TinyTest', () => {
                 })
 
 
-                it('should not throw with: false, false', () => {
+                it('does not throw with: false, false', () => {
                     try {
                         assertEqual(false, false)
                         var passed = true
@@ -65,7 +65,7 @@ describe('TinyTest', () => {
 
             describe('The arguments do not match', () => {
 
-                it('should throw with: true, false', () => {
+                it('throws with: true, false', () => {
                     try {
                         assertEqual(true, false)
                         var failed = false
@@ -76,7 +76,7 @@ describe('TinyTest', () => {
                     assert(failed)
                 })
 
-                it('should throw with: false, true', () => {
+                it('throws with: false, true', () => {
                     try {
                         assertEqual(false, true)
                         var failed = false
@@ -95,7 +95,7 @@ describe('TinyTest', () => {
 
         describe('Log text output format', () => {
 
-            it('should output the correct indentations, colors and icons', () => {
+            it('outputs the correct indentations, colors and icons', () => {
                 const tinyTest = new TinyTest()
                 tinyTest.describe('folder icon', () => {
                     tinyTest.it('green check icon', () => tinyTest.assert(true))
@@ -141,33 +141,28 @@ describe('TinyTest', () => {
             }
 
 
-            it('should be able to have deep nested descriptions', () => {
-                const descriptions = Array(11).fill('Level ').map((text, i) => text + (i + 1)).reverse()
+            it('is able to have deep nested descriptions', () => {
+                const size = 11
+                const descriptions = Array(size).fill('Level ').map((text, i) => text + (i + 1)).reverse()
                 createDeepNestedTest(descriptions)
 
-                let output = ''
+                const output: string[] = []
                 const logger = new Logger({
-                    onLog: (log: TestLog) => output += beautifyTestLog(log) + '\n'
+                    onLog: (log: TestLog) => output.push(beautifyTestLog(log))
                 })
 
-                const expected = `Running tests...
-📂 Level 1
-  📂 Level 2
-    📂 Level 3
-      📂 Level 4
-        📂 Level 5
-          📂 Level 6
-            📂 Level 7
-              📂 Level 8
-                📂 Level 9
-                  📂 Level 10
-                    📂 Level 11
-                        ✅ \x1B[32mSupports more than 10 nested descriptions\x1B[0m\n
-✅ \x1B[32mPassed: 1\x1B[0m
-❌ \x1B[31mFailed: 0\x1B[0m\n`
-
                 tinyTest.runAllTests(logger)
-                assertEqual(output, expected)
+
+                assertEqual('Running tests...', output[0])
+
+                for (let i = 1; i <= size; i++) {
+                    const expected = `${'  '.repeat(i - 1)}📂 Level ${i}`
+                    assertEqual(expected, output[i])
+                }
+
+                assertEqual(`${'  '.repeat(size + 1)}✅ \x1B[32mSupports more than 10 nested descriptions\x1B[0m`, output[size + 1])
+                assertEqual(`\n✅ \x1B[32mPassed: 1\x1B[0m\n❌ \x1B[31mFailed: 0\x1B[0m`, output[size + 2])
+                assertEqual(size + 3, output.length)
             })
         })
     })

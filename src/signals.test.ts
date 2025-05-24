@@ -70,12 +70,15 @@ describe('Signals', () => {
 
     it('supports multiple signals in a single effect', () => {
       const [value1] = createSignal(3)
-      const [value2] = createSignal(4)
+      const [value2, setValue2] = createSignal(4)
       let output = 0
 
       effect(() => output = value1() * value2())
 
       assertEqual(output, 12)
+
+      setValue2(10)
+      assertEqual(output, 30)
     })
 
   })
