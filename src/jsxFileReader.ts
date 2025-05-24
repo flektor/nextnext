@@ -1,8 +1,8 @@
 import path from 'path';
 import fs from 'fs';
-import { type Node } from './parser/jsxParser';
+import { createElement, createComponent, createReactiveContent, createComputedContent, createTextContent } from './create';
+import { parseJsx, type Node, type ElementNode } from './parser/jsxParser';
 import { tokenize } from './parser/tokenizer';
-import { parseJsx, Props, type ElementNode } from './parser/jsxParser';
 import Vars from './variables';
 
 export function importPage(filepath: string, root: string = ''): string {
@@ -12,22 +12,21 @@ export function importPage(filepath: string, root: string = ''): string {
 }
 
 export function importComponent(filepath: string, root: string = ''): string {
-  // If the filepath starts with ./ or ../, resolve it relative to the current file's directory.
   if (filepath.charAt(0) === '.' || filepath.charAt(0) === '/') {
     filepath = path.resolve(path.dirname(root), filepath);
   }
 
-  // Read the content of the file.
   const code = fs.readFileSync(filepath, 'utf-8');
-  // Assuming transformJsxToCreateElement is defined elsewhere
-  let { element, imports: tempImports } = transformJsxToCreateElement(code);
-  element = element.replace(/\bexport\b/g, '');
-  let fileContent = element;
 
-  // For each import, recursively resolve it using the current file's directory
+  let { element, imports: tempImports } = transformJsxToElement(code);
+  element = element.replace(/\bexport\b/g, '');
+  let fileContent = '';
+
   for (const imp of tempImports) {
     fileContent += '\n\n' + importComponent(imp.module, filepath);
   }
+
+  fileContent += '\n\n' + element
 
   return fileContent
 }
@@ -55,26 +54,16 @@ function findImports(fileContent: string) {
   return imports
 }
 
-const isComponentNode = (node: ElementNode) => !!node.tag.match(Regex.COMPONENT_TAG)
-
-function createComponent(node: ElementNode) {
-  if (!node.props) return `${node.tag}()`;
-
-  const componentProps = removeQuotesFromKeysAndValues(node.props)
-
-  return `${node.tag}(${componentProps})`
-}
-
+const isComponentNode = (ast: ElementNode) => !!ast.tag.match(Regex.COMPONENT_TAG)
 
 function transformASTToJS(ast: Node): string {
   if (ast.type === "text") {
-    return `document.createTextNode(${JSON.stringify(ast.value)})`;
+    return createTextContent(ast);
   }
 
   if (ast.type === "element") {
     const children = (ast.children || [])
       .map((child: any) => transformASTToJS(child))
-    const hasChildren = children.length > 0
 
     // const effects = children.filter((childCode: any) => { console.log({ childCode }); return childCode.startsWith('\`') })
     //   .map((childCode: any) => `effect(()=> element.textContent = ${childCode});`).join("\n") || '';
@@ -82,80 +71,25 @@ function transformASTToJS(ast: Node): string {
     // children.map((childCode: any) => `element.appendChild(${childCode.trim()})`)
     //   .join("\n");
 
-    const elementVarName = Vars.element.next()
-    const childrenVarName = Vars.children.next()
-
     if (isComponentNode(ast)) {
-      const props = ast.props ? convertValuesWithRefsToStringLitterals(ast.props, []) : '{}'
-
-      if (children.length === 1) {
-        return `(function() {
-          const ${elementVarName} = ${ast.tag}(${props}) 
-          ${elementVarName}.appendChild(${children})
-          return ${elementVarName}
-        })()`;
-      }
-
-      return `(function() {
-        ${hasChildren ? `const ${childrenVarName} = [${children}]` : ''}
-        const ${elementVarName} = ${ast.tag}(${props}) 
-        ${hasChildren && !ast?.props?.children ? `${elementVarName}.append(...${childrenVarName})` : ''}
-        return ${elementVarName};
-      })()`;
+      return createComponent(ast, children)
     }
 
-    const props = Object.entries(ast.props || {})
-      .map(([key, value]) => {
-        if (value === 'ref') {
-          return `${value}.current = ${elementVarName}`
-        } else if (key.startsWith("on")) {
-          return `${elementVarName}.addEventListener("${key.slice(2).toLowerCase()}", ${value})`;
-        } else if (key === "style") {
-          return `Object.assign(${elementVarName}.style, ${JSON.stringify(value)})`;
-        } else {
-          return `${elementVarName}.setAttribute("${key}", ${JSON.stringify(value)})`;
-        }
-      }).join("\n");
-
-
-
-    if (children.length === 1) {
-      return `(function() {
-        const ${elementVarName} = document.createElement("${ast.tag}")
-        ${props}
-        ${elementVarName}.appendChild(${children})
-        return ${elementVarName}
-      })()`;
-    }
-
-    return `(function() {
-      ${hasChildren ? `const ${childrenVarName} = [${children}]` : ''}
-      const ${elementVarName} = document.createElement("${ast.tag}")
-      ${props}
-      ${hasChildren ? `${elementVarName}.append(...${childrenVarName})` : ''}
-      return ${elementVarName};
-    })()`;
+    return createElement(ast, children);
   }
 
-
   if (ast.type === "reactive") {
-    // childCode.startsWith('\`')
-    const elementVarName = Vars.element.next()
-    return `(function() {
-      const ${elementVarName} = document.createTextNode(${ast.value})
-      effect(()=> ${elementVarName}.textContent = ${ast.value})
-      return ${elementVarName}
-    })()`;
+    return createReactiveContent(ast)
   }
 
   if (ast.type === "computed") {
-    return `document.createTextNode(${ast.value})`
+    return createComputedContent(ast)
   }
 
   return "";
 }
 
-function transformJsxToCreateElement(code: string) {
+function transformJsxToElement(code: string) {
   const signals = extractSignals(code);
   const imports = findImports(code);
 
@@ -179,29 +113,6 @@ function transformJsxToCreateElement(code: string) {
   return { element, imports }
 }
 
-function removeQuotesFromKeysAndValues(object: Object) {
-  return JSON.stringify(object).replace(/:\s*"([^"]+)"/g, ': $1'); // Remove quotes 
-}
-
-function convertValuesWithRefsToStringLitterals(obj: Props, signals: string[]) {
-  // convert prop values to string litterals if needed, so we can pass variables or functions references
-  return JSON.stringify(obj, null, 2)
-    .replace(/("on[A-Z][a-zA-Z]*"):\s*"([^"]+)"/g, '$1: $2') // Keeps the key quoted but removes quotes from values
-    .replace(/"([^"]*{[^"]*})"/g, (_, content) => {
-
-      // for (const signal of signals) {
-      //   if (content.includes(signal)) {
-      //     content = (content as string).replace(new RegExp(`\\{([^}]*)\\b${signal}\\b([^}]*)\\}`, 'g'), (match, before, after) => {
-      //       return `{${before}this.${signal}${after}}`;
-      //     }).trim();
-      //   }
-      // }
-
-      // console.log({ content })
-      return "`" + content.replace(/{/g, "${") + "`"
-    }
-    );
-}
 
 // const signalRegex = /\bthis\.(\w+)\s*=\s*createSignal\(/g;
 
