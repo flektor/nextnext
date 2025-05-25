@@ -1,4 +1,5 @@
 import { Button } from "./components/Button.jsx"
+import { MenuPage } from "./components/MenuPage.jsx"
 
 export function Home({ isTrue }) {
   const [count, setCount] = createSignal(1)
@@ -9,15 +10,16 @@ export function Home({ isTrue }) {
   const onClick = () => setCount(count() + 1)
 
   const one = 11
-
+ 
   const onClick2 = () => console.log('Boom2!')
 
   const ref = createRef()
-  console.log(ref)
+  const refDiv = createRef()
+ 
 
-  
   return (<div ref={refDiv} class="flex justify-center">
     <p>
+      <h2>The last.js library you ever needed!</h2>
       <p>
         nested component construction delacration? ?
       </p>
@@ -26,6 +28,7 @@ export function Home({ isTrue }) {
 
       <span>{one}</span>
 
+ 
       {count()} x {doubleCount()} = {count() * doubleCount()}
       <br></br>
       <p>
@@ -37,7 +40,10 @@ export function Home({ isTrue }) {
           Click me! {count()}
         </button>
         <Button color="red" onClick={onClick2} label="style 2"></Button>
+
       </p>
+        <MenuPage></MenuPage>
+        <MenuPage></MenuPage>
     </p>
   </div>)
 }
