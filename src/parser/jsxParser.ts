@@ -8,12 +8,12 @@ export type ElementNode = {
   props?: Props;
   children?: Node[];
 }
- 
+
 export type TextNode = {
   type: 'text'
   value: string
 }
- 
+
 export type ComputedNode = {
   type: 'computed'
   value: Object
@@ -76,18 +76,21 @@ export function parseJsx(tokens: Token[], signals: string[]): ElementNode | unde
         break;
 
       case TokenType.REACTIVE_CONTENT:
-        addChild(stack[stack.length - 1], {
+         addChild(stack[stack.length - 1], {
           type: 'reactive',
-          value: convertToStringLitteral(token.value)
+          
+          value: isSingleFunctionExpression(token.value) ? token.value.substring(1, token.value.length - 1) : convertToStringLitteral(token.value)
         })
         break;
 
-        case TokenType.COMPUTED_CONTENT:
-          addChild(stack[stack.length - 1], {
-            type: 'computed',
-            value: convertToStringLitteral(token.value)
-          })
-          break;
+      case TokenType.COMPUTED_CONTENT:
+        const value = token.value.startsWith('{') ? token.value.substring(1, token.value.length - 1) : convertToStringLitteral(token.value)
+        addChild(stack[stack.length - 1], {
+          type: 'computed',
+          // value: convertToStringLitteral(token.value)
+          value
+        })
+        break;
 
       case TokenType.PROPS:
         node = stack[stack.length - 1]
@@ -97,6 +100,9 @@ export function parseJsx(tokens: Token[], signals: string[]): ElementNode | unde
         }
     }
   }
+}
+function isSingleFunctionExpression(str: string): boolean {
+  return /^\s*\{[a-zA-Z_$][\w$]*\(\)\}\s*$/.test(str);
 }
 
 function parseProps(str: string, signals: string[]) {

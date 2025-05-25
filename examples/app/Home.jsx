@@ -10,17 +10,10 @@ export function Home({ isTrue }) {
 
   const one = 11
 
-  const H2 = ({ children }) => <div>
-    <h2>{children}</h2>
-  </div>
-
-  const H3 = ({ children }) => <div>
-    <h3>{children}</h3>
-  </div>
-
   const onClick2 = () => console.log('Boom2!')
 
   const ref = createRef()
+  const refDiv = createRef()
   console.log(ref)
 
   
@@ -33,9 +26,6 @@ export function Home({ isTrue }) {
       <br></br>
 
       <span>{one}</span>
-      <H2 children={"Double count?"}>{doubleCount()}</H2>
-      <br></br>
-      <H3>Double count? {doubleCount()}</H3>
 
       {count()} x {doubleCount()} = {count() * doubleCount()}
       <br></br>

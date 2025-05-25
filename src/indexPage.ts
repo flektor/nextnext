@@ -21,6 +21,33 @@ export function indexPage(appComponentPath: string) {
     ${injectSseClient()}
     ${injectSignals()} 
     ${injectCreateRef()} 
+
+    function isElement(obj) {
+      try {
+        //Using W3 DOM2 (works for FF, Opera and Chrome)
+        return obj instanceof HTMLElement;
+      }
+      catch(e){
+        //Browsers not supporting W3 DOM2 don't have HTMLElement and
+        //an exception is thrown and we end up here. Testing some
+        //properties that all elements have (works on IE7)
+        return (typeof obj==="object") &&
+          (obj.nodeType===1) && (typeof obj.style === "object") &&
+          (typeof obj.ownerDocument ==="object");
+      }
+    }
+
+    function appendContent(parent, content) {
+      if (Array.isArray(content)) {
+        return parent.append(...content)
+      }
+      parent.appendChild(content)
+    }
+
+    function getComputedContent(content) {
+      return isElement(content) ? content : document.createTextNode(content)
+    }
+
     ${App}
 
     document.body.appendChild(App())
@@ -33,18 +60,8 @@ export function indexPage(appComponentPath: string) {
 function injectCreateRef() {
   return `function createRef() {
     return { current: null }
-  }
-
-  function attachRef(ref, element) {
-    ref.current = element;
-    return ref
   }`;
 }
-// function injectCreateElement() {
-//   const createElementFilePath = path.join(__dirname, './element.js');
-//   const createElementCode = fs.readFileSync(createElementFilePath, 'utf-8');
-//   return createElementCode.replace(/\bexport\b/g, '');
-// }
 
 function injectSignals() {
   const createElementFilePath = path.join(__dirname, './signals.js');

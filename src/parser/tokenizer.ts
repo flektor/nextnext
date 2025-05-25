@@ -97,14 +97,18 @@ export function tokenize(jsx: string, signals: string[] = []): Token[] {
         }
 
         if (text && children) {
+
             // here text is the props as a string.  e.g 'ref={ref} class="bg-blue-500" onClick={onClick}'
             // children might be text
 
+            const trimpedChildren = children.replace('\r', '').trim()
+            const isComputed = convertToStringLitteral(trimpedChildren) !== trimpedChildren
 
             tokens.push({ type: TokenType.PROPS, value: text })
-            const hasEffect = signals && isReactive(children, signals)
-            const type = hasEffect ? TokenType.REACTIVE_CONTENT : TokenType.CONTENT
-            tokens.push({ type, value: children });
+            const hasEffect = signals && isReactive(trimpedChildren, signals)
+            const type = hasEffect ? TokenType.REACTIVE_CONTENT : isComputed ?  TokenType.COMPUTED_CONTENT : TokenType.CONTENT
+
+            tokens.push({ type, value: trimpedChildren });
             continue;
         }
 
@@ -129,7 +133,6 @@ export function tokenize(jsx: string, signals: string[] = []): Token[] {
         }
 
         console.error("Syntax warning, not supported yet: ", { value })
-
     }
 
     return tokens;
