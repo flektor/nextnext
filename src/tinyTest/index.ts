@@ -67,7 +67,6 @@ export class TinyTest {
 
   runAllTests(logger: Logger) {
     const testTree = this.buildTestTree(this.tests)
-
     const executeAllTests = (parent: TestDescription | undefined = undefined, depth = 0) => {
       const tests = testTree.get(parent) || []
 

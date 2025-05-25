@@ -32,7 +32,6 @@ export function defaultEffect(ref, value) {
   const elem = getComputedContent(value)
   ref.current.replaceWith(elem)
   ref.current = elem
-  console.log(ref.current)
 }
 
 export function debug(fn) {

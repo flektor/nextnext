@@ -53,9 +53,6 @@ export function tokenize(jsx: string, signals: string[] = []): Token[] {
 
             // todo     if current-1 === '/'   then prepare to close the tag    e.g <Button {...props} />
 
-
-
-
             continue;
         }
 
@@ -106,7 +103,7 @@ export function tokenize(jsx: string, signals: string[] = []): Token[] {
 
             tokens.push({ type: TokenType.PROPS, value: text })
             const hasEffect = signals && isReactive(trimpedChildren, signals)
-            const type = hasEffect ? TokenType.REACTIVE_CONTENT : isComputed ?  TokenType.COMPUTED_CONTENT : TokenType.CONTENT
+            const type = hasEffect ? TokenType.REACTIVE_CONTENT : isComputed ? TokenType.COMPUTED_CONTENT : TokenType.CONTENT
 
             tokens.push({ type, value: trimpedChildren });
             continue;
@@ -134,6 +131,8 @@ export function tokenize(jsx: string, signals: string[] = []): Token[] {
 
         console.error("Syntax warning, not supported yet: ", { value })
     }
+    // console.log(tokens.filter(t => t.value === 'div').filter(t => t.value.length))
+    // console.log(tokens)
 
     return tokens;
 }

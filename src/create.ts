@@ -1,4 +1,4 @@
-import { ComputedNode, ElementNode, Props, ReactiveNode, TextNode, type Node } from './parser/jsxParser';
+import { ComputedNode, ElementNode, Props, ReactiveNode, TextNode } from './parser/jsxParser';
 import Vars from './variables';
 
 export function createComponent(ast: ElementNode, children: any[]) {
@@ -11,7 +11,6 @@ export function createComponent(ast: ElementNode, children: any[]) {
     if (children.length === 1) {
         return `(function() {
           const ${elementVarName} = ${ast.tag}(${props}) 
-
           ${elementVarName}.appendChild(${children})
           return ${elementVarName}
         })()`;
@@ -31,15 +30,15 @@ export function createElement(ast: ElementNode, children: any[]) {
     const props = Object.entries(ast.props || {})
         .map(([key, value]) => {
             if (key === 'ref') {
-                return `${value}.current = ${elementVarName}\n`
+                return `${value}.current = ${elementVarName}`
             } else if (key.startsWith("on")) {
-                return `${elementVarName}.addEventListener("${key.slice(2).toLowerCase()}", ${value})\n`;
+                return `${elementVarName}.addEventListener("${key.slice(2).toLowerCase()}", ${value})`;
             } else if (key === "style") {
-                return `Object.assign(${elementVarName}.style, ${JSON.stringify(value)})\n`;
+                return `Object.assign(${elementVarName}.style, ${JSON.stringify(value)})`;
             } else {
-                return `${elementVarName}.setAttribute("${key}", ${JSON.stringify(value)})\n`;
+                return `${elementVarName}.setAttribute("${key}", ${value})`;
             }
-        })
+        }).join("\n")
 
     if (children.length === 1) {
         return `(function() {
@@ -68,7 +67,7 @@ export function createReactiveContent(ast: ReactiveNode) {
     return `(function() {
       const ${elementVarName} = { current: getComputedContent(${ast.value}) }
 
-     ${/*TODO: bind this ref to the prop ref, otherwise I assume that the props.ref will be lost after the effect runs*/ "// TODO@BuildTime" }
+     ${/*TODO: bind this ref to the prop ref, otherwise I assume that the props.ref will be lost after the effect runs*/ "// TODO@BuildTime"}
 
       effect(()=> defaultEffect(${elementVarName}, ${ast.value}))
       return ${elementVarName}.current
@@ -76,23 +75,42 @@ export function createReactiveContent(ast: ReactiveNode) {
 }
 
 export function createTextContent(ast: TextNode): string {
-    return `document.createTextNode(${JSON.stringify(ast.value)})`;
+    return `document.createTextNode('${ast.value}')`;
 }
 
 export function createComputedContent(ast: ComputedNode): string {
-    console.log(ast)
     return `getComputedContent(${ast.value})`
 }
 
-function removeQuotesFromKeysAndValues(object: Object): Object | string {
-    if (Array.isArray(object)) {
-        return object.map((item) => {
-            if (typeof item === 'object' && item !== null) {
-                return removeQuotesFromKeysAndValues(item);
-            }
-            return item;
-        });
-    }
+// function removeQuotesFromKeysAndValues(object: Object): Object | string {
+//     if (Array.isArray(object)) {
+//         return object.map((item) => {
+//             if (typeof item === 'object' && item !== null) {
+//                 return removeQuotesFromKeysAndValues(item);
+//             }
+//             return item;
+//         });
+//     }
 
-    return JSON.stringify(object).replace(/:\s*"([^"]+)"/g, ': $1'); // Remove quotes 
-} 
+
+//     return JSON.stringify(object).replace(/:\s*"([^"]+)"/g, ': $1'); // Remove quotes 
+// } 
+
+function removeQuotesFromKeysAndValues(object: Object): Object | string {
+    const a = (
+        '{' +
+        Object.entries(object)
+            .map(([key, value]) => {
+                let valStr =
+                    typeof value === 'string' && !/^["'].*["']$/.test(value)
+                        ? value
+                        : JSON.stringify(value);
+                return `${key}: ${valStr}`;
+            })
+            .join(', ') +
+        '}'
+    )
+
+console.error("TODO: here is where i left it, fix the nested text")
+    return a
+}

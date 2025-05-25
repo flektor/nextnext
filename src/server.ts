@@ -6,6 +6,8 @@ import { loadEnvironmentVariables } from './utils/dotEnv'
 import { indexPage } from './indexPage'
 import { blue, green, magenta, yellow } from './utils/console-colors'
 import { printServerUrl } from './utils/logger'
+import { importPage as importAppComponent } from "./jsxFileReader";
+import { format } from "prettier"
 
 const project = readProjectConfig()
 const appComponentPath = path.join(project.root, project.main)
@@ -24,7 +26,11 @@ const sse = isDevMode ? new SSEServer() : null
 const server = createServer(async (req, res) => {
   if (req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/html' })
-    res.end(indexPage(appComponentPath))
+
+    const App = importAppComponent(appComponentPath)
+    const html = format(indexPage(App), { parser: "html" })
+
+    res.end(html)
 
   } else if (isDevMode && req.url === '/dev-mode-events') {
     sse!.handler(req, res)
@@ -35,7 +41,7 @@ const server = createServer(async (req, res) => {
 })
 
 server.listen(process.env.PORT, () => {
-  if(!isRestart) {
+  if (!isRestart) {
     printServerUrl(process.env.PORT, environment)
   }
 })

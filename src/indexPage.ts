@@ -1,9 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { importPage as importAppComponent } from "./jsxFileReader";
 
-export function indexPage(appComponentPath: string) {
-  const App = importAppComponent(appComponentPath)
+export function indexPage(content: string) {
 
   return `<!DOCTYPE html>
   <html>
@@ -41,14 +39,22 @@ export function indexPage(appComponentPath: string) {
       if (Array.isArray(content)) {
         return parent.append(...content)
       }
-      parent.appendChild(content)
-    }
+        parent.appendChild(content)
+      }
 
     function getComputedContent(content) {
-      return isElement(content) ? content : document.createTextNode(content)
+      if (Array.isArray(content)) {
+        return content
+      }
+
+      if(isElement(content)) {
+        return content
+      }
+        
+      return document.createTextNode(content)
     }
 
-    ${App}
+    ${content}
 
     document.body.appendChild(App())
     
