@@ -56,14 +56,14 @@ function findImports(fileContent: string) {
 
 const isComponentNode = (ast: ElementNode) => !!ast.tag.match(Regex.COMPONENT_TAG)
 
-function transformASTToJS(ast: Node): string {
+function transformASTToJS(ast: Node, signals: string[]): string {
   if (ast.type === "text") {
     return createTextContent(ast);
   }
 
   if (ast.type === "element") {
     const children = (ast.children || [])
-      .map((child: any) => transformASTToJS(child))
+      .map((child: any) => transformASTToJS(child, signals))
 
     // const effects = children.filter((childCode: any) => { console.log({ childCode }); return childCode.startsWith('\`') })
     //   .map((childCode: any) => `effect(()=> element.textContent = ${childCode});`).join("\n") || '';
@@ -75,7 +75,7 @@ function transformASTToJS(ast: Node): string {
       return createComponent(ast, children)
     }
 
-    return createElement(ast, children);
+    return createElement(ast, children, signals);
   }
 
   if (ast.type === "reactive") {
@@ -100,9 +100,9 @@ function transformJsxToElement(code: string) {
       const tokens = tokenize(match, signals).reverse()
       if (tokens.length === 0) return '';
 
-      const ast = parseJsx(tokens, signals)
+      const ast = parseJsx(tokens)
       if (!ast) return '';
-      return transformASTToJS(ast)
+      return transformASTToJS(ast, signals)
 
     } catch (error) {
       console.error("Error processing JSX: ", match, error)

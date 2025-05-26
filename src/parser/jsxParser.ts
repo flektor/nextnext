@@ -26,10 +26,7 @@ export type ReactiveNode = {
 
 export type Node = ElementNode | ComputedNode | ReactiveNode | TextNode
 
-export function parseJsx(tokens: Token[], signals: string[]): ElementNode | undefined {
-  // const parsedCode = reconstructCode(tokens)
-  // console.log(jsx, tokens, parsedCode)
-  // return parsedCode
+export function parseJsx(tokens: Token[]): ElementNode | undefined {
   const stack: ElementNode[] = [];
 
   const addChild = (parent: ElementNode, child: Node) => {
@@ -76,9 +73,9 @@ export function parseJsx(tokens: Token[], signals: string[]): ElementNode | unde
         break;
 
       case TokenType.REACTIVE_CONTENT:
-         addChild(stack[stack.length - 1], {
+        addChild(stack[stack.length - 1], {
           type: 'reactive',
-          
+
           value: isSingleFunctionExpression(token.value) ? token.value.substring(1, token.value.length - 1) : convertToStringLitteral(token.value)
         })
         break;
@@ -87,7 +84,6 @@ export function parseJsx(tokens: Token[], signals: string[]): ElementNode | unde
         const value = token.value.startsWith('{') ? token.value.substring(1, token.value.length - 1) : convertToStringLitteral(token.value)
         addChild(stack[stack.length - 1], {
           type: 'computed',
-          // value: convertToStringLitteral(token.value)
           value
         })
         break;
@@ -95,8 +91,7 @@ export function parseJsx(tokens: Token[], signals: string[]): ElementNode | unde
       case TokenType.PROPS:
         node = stack[stack.length - 1]
         if (node) {
-          node.props = parseProps(token.value, signals)
-
+          node.props = parseProps(token.value)
         }
     }
   }
@@ -105,34 +100,19 @@ function isSingleFunctionExpression(str: string): boolean {
   return /^\s*\{[a-zA-Z_$][\w$]*\(\)\}\s*$/.test(str);
 }
 
-function parseProps(str: string, signals: string[]) {
-  if (!str) return
-
-  const regex = /(\w+)\s*=\s*{(.*?)}(?=\s|$)/g;
-  const props: Props = {};
+function parseProps(str: string) {
+  const props: Record<string, string> = {};
+  const regex = /(\w+)\s*=\s*(\{[^}]*\}|"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|`(?:\\.|[^\\`]|(?:\${[^}]*}))*`)/g;
   let match;
-
   while ((match = regex.exec(str)) !== null) {
-    const [prop, key, value] = match
-    props[key] = value.trim()
-    // console.log()
-    // if (isReactive(`{${value}}`, signals)) {
-    //   console.log({ prop: { [key]: value } })
-    // }
+    const [, key, val] = match;
+    props[key] = val.startsWith('{') ? val.slice(1, -1).trim() : val;
+  
+    if(props[key].startsWith("`")) {
+      props[key] += "}`"
+    }
   }
 
-  // for (const prop in props) {
-  //   let value = props[prop]
-
-  //   if (isReactive(value, signals)) {
-  //     console.log({ prop: { [prop]: value } })
-  //   }
-  // }
-
-  if (Object.keys(props).length) return props
-
-  // console.warn("TODO: FIX THIS")
-  const [name, value] = str.split("=")
-  const clearedValue = value?.replace(/^\\?["'`]|\\?["'`]$/g, '')
-  return { [name]: clearedValue || value }
-} 
+  return props;
+}
+ 
