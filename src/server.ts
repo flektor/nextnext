@@ -7,6 +7,7 @@ import { indexPage } from './indexPage'
 import { blue, green, magenta, yellow } from './utils/console-colors'
 import { printServerUrl } from './utils/logger'
 import { importPage as importAppComponent } from "./jsxFileReader";
+import { format } from "prettier"
 
 const project = readProjectConfig()
 const appComponentPath = path.join(project.root, project.main)
@@ -27,7 +28,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html' })
 
     const App = importAppComponent(appComponentPath)
-    const html = indexPage(App)
+    const html = format(indexPage(App), { parser: "html" })
 
     res.end(html)
 
