@@ -1,3 +1,4 @@
+import { Calculator } from "./Calculator.jsx"
 import { Button } from "./components/Button.jsx"
 import { MenuPage } from "./components/MenuPage.jsx"
 
@@ -19,7 +20,7 @@ export function Home({ isTrue }) {
 
   return (<div ref={refDiv} class="flex justify-center">
     <p>
-      <h2>The last.js library you ever needed!</h2>
+      <h2>The last.js library you need!</h2>
       <p>
         nested component construction delacration? ?
       </p>
@@ -27,7 +28,6 @@ export function Home({ isTrue }) {
       <br></br>
 
       <span>{one}</span>
-
  
       {count()} x {doubleCount()} = {count() * doubleCount()}
       <br></br>
@@ -36,14 +36,15 @@ export function Home({ isTrue }) {
         <p>wadw da {count()}</p>
       </p>
       <p class="flex gap-4">
-        <button ref={ref} class="text-primary btn-cta btn-cta:hover" onClick={onClick}>
+        <button ref={ref} class="bg-red text-primary btn-cta btn-cta:hover" onClick={onClick}>
           Click me! {count()}
         </button>
-        <Button color="red" onClick={onClick2} label="style 2"></Button>
-
+        <Button color="red" onClick={onClick2} label="style 2"/>
       </p>
-        <MenuPage></MenuPage>
-        <MenuPage></MenuPage>
+        <MenuPage/>
+        <MenuPage/>
+        <br />
+        <Calculator/>
     </p>
   </div>)
 }
