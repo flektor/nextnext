@@ -41,9 +41,6 @@ export function parseJsx(tokens: Token[]): ElementNode | undefined {
     }
   }
 
-  function convertToStringLitteral(str: string) {
-    return `\`${str.replace(/{([^{}]+)}/g, (_, expr) => `\${${expr}}`)}\``;
-  }
 
   while (tokens.length > 0) {
     const token = tokens.pop();
@@ -75,16 +72,14 @@ export function parseJsx(tokens: Token[]): ElementNode | undefined {
       case TokenType.REACTIVE_CONTENT:
         addChild(stack[stack.length - 1], {
           type: 'reactive',
-
-          value: isSingleFunctionExpression(token.value) ? token.value.substring(1, token.value.length - 1) : convertToStringLitteral(token.value)
+          value: getReactiveValue(token.value)
         })
         break;
 
       case TokenType.COMPUTED_CONTENT:
-        const value = token.value.startsWith('{') ? token.value.substring(1, token.value.length - 1) : convertToStringLitteral(token.value)
         addChild(stack[stack.length - 1], {
           type: 'computed',
-          value
+          value: getComputedValue(token.value)
         })
         break;
 
@@ -96,8 +91,33 @@ export function parseJsx(tokens: Token[]): ElementNode | undefined {
     }
   }
 }
-function isSingleFunctionExpression(str: string): boolean {
-  return /^\s*\{[a-zA-Z_$][\w$]*\(\)\}\s*$/.test(str);
+
+function getComputedValue(str: string) {
+  if (str.startsWith('{')) {
+    return removeBrackets(str)
+  }
+
+  return convertToStringLitteral(str)
+}
+
+function getReactiveValue(str: string) {
+  if (isSingleBracedExpression(str)) {
+    return removeBrackets(str)
+  }
+
+  return convertToStringLitteral(str)
+}
+
+function isSingleBracedExpression(str: string) {
+  return /^\{[^{}]+\}$/.test(str);
+}
+
+function removeBrackets(str: string) {
+  return str.substring(1, str.length - 1)
+}
+
+function convertToStringLitteral(str: string) {
+  return `\`${str.replace(/{([^{}]+)}/g, (_, expr) => `\${${expr}}`)}\``;
 }
 
 function parseProps(str: string) {
@@ -107,12 +127,11 @@ function parseProps(str: string) {
   while ((match = regex.exec(str)) !== null) {
     const [, key, val] = match;
     props[key] = val.startsWith('{') ? val.slice(1, -1).trim() : val;
-  
-    if(props[key].startsWith("`")) {
+
+    if (props[key].startsWith("`")) {
       props[key] += "}`"
     }
   }
 
   return props;
 }
- 
