@@ -26,9 +26,20 @@ export function createComponent(ast: ElementNode, children: any[]) {
       })()`;
 }
 
+let lastContextId: number | null = null
+
+function getContext(context: { id: number, value: string } | undefined): string | null {
+    if (!context || lastContextId === context.id) {
+        lastContextId = null
+        return null
+    }
+
+    lastContextId = context.id
+    return context.value
+}
+
 export function createElement(ast: ElementNode, children: any[], signals: string[]) {
     const elementVarName = Vars.element.next()
-
 
     const props = Object.entries(ast.props || {})
         .map(([key, value]) => {
@@ -39,24 +50,21 @@ export function createElement(ast: ElementNode, children: any[], signals: string
             } else if (key === "style") {
                 return `Object.assign(${elementVarName}.style, ${JSON.stringify(value)})`;
             } else {
-
                 const hasEffect = isReactive(value, signals)
-
                 return `${elementVarName}.setAttribute("${key}", ${value})
-                ${hasEffect ? `effect(()=>{
-                    console.log( ${elementVarName})
-                    ${elementVarName}.setAttribute("${key}", ${value})
-                })` : ''}`;
+                ${hasEffect ? `effect(()=> ${elementVarName}.setAttribute("${key}", ${value}))` : ''}`;
             }
         }).join("\n")
 
     if (children.length === 1) {
-        return `(function() {
+        const context = getContext(ast.childrenContext)
+        
+        return `${context ?? '(function() '}{
           const ${elementVarName} = document.createElement("${ast.tag}")
           ${props}
-          appendContent(${elementVarName}, ${children})
+          appendContent(${elementVarName}, ${children[0]})
           return ${elementVarName}
-        })()`;
+        })${context ? '' : '()'}`;
     }
 
     const hasChildren = children.length > 0
@@ -67,6 +75,8 @@ export function createElement(ast: ElementNode, children: any[], signals: string
     ${hasChildren ? `const ${childrenVarName} = [${children}]` : ''}
       const ${elementVarName} = document.createElement("${ast.tag}")
       ${props}
+    
+
       ${hasChildren ? `appendContent(${elementVarName}, ${childrenVarName})` : ''}
       return ${elementVarName};
     })()`;
@@ -74,11 +84,11 @@ export function createElement(ast: ElementNode, children: any[], signals: string
 
 export function createReactiveContent(ast: ReactiveNode) {
     const elementVarName = Vars.element.next()
+
     return `(function() {
       const ${elementVarName} = { current: getComputedContent(${ast.value}) }
 
      ${/*TODO: bind this ref to the prop ref, otherwise I assume that the props.ref will be lost after the effect runs*/ "// TODO@BuildTime"}
-
       effect(()=> defaultEffect(${elementVarName}, ${ast.value}))
       return ${elementVarName}.current
     })()`;

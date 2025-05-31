@@ -7,6 +7,7 @@ export type ElementNode = {
   tag: string;
   props?: Props;
   children?: Node[];
+  childrenContext?: ChildrenContext
 }
 
 export type TextNode = {
@@ -25,9 +26,16 @@ export type ReactiveNode = {
 }
 
 export type Node = ElementNode | ComputedNode | ReactiveNode | TextNode
+export type ChildrenContext = {
+  id: number,
+  value: string
+} | undefined
 
 export function parseJsx(tokens: Token[]): ElementNode | undefined {
   const stack: ElementNode[] = [];
+
+  let contextCount = 0
+  let context: ChildrenContext
 
   const addChild = (parent: ElementNode, child: Node) => {
     if (!parent) {
@@ -38,6 +46,9 @@ export function parseJsx(tokens: Token[]): ElementNode | undefined {
       parent.children.push(child);
     } else {
       parent.children = [child]
+      if (context) {
+        parent.childrenContext = context
+      }
     }
   }
 
@@ -63,6 +74,17 @@ export function parseJsx(tokens: Token[]): ElementNode | undefined {
         if (node) {
           addChild(stack[stack.length - 1], node)
         }
+        break;
+
+      case TokenType.OPEN_CONTEXT:
+        context = {
+          id: contextCount++,
+          value: token.value
+        }
+        break;
+
+      case TokenType.CLOSE_CONTEXT:
+        context = undefined
         break;
 
       case TokenType.CONTENT:

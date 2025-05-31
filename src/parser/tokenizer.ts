@@ -9,6 +9,8 @@ export const TokenType = {
     CONTENT: 'content',
     REACTIVE_CONTENT: 'reactive',
     COMPUTED_CONTENT: 'computed',
+    OPEN_CONTEXT: '<context>',
+    CLOSE_CONTEXT: '</context>',
 } as const
 
 
@@ -16,7 +18,6 @@ function convertToStringLitteral(str: string) {
     const newStr = str.replace(/{([^{}]+)}/g, (_, expr) => `\${${expr}}`)
     return newStr === str ? str : `\`${newStr}\``
 }
-
 
 export function tokenize(jsx: string, signals: string[] = []): Token[] {
     const tokens: Token[] = [];
@@ -105,8 +106,17 @@ export function tokenize(jsx: string, signals: string[] = []): Token[] {
             const isComputed = convertToStringLitteral(trimpedChildren) !== trimpedChildren
 
             tokens.push({ type: TokenType.PROPS, value: text })
+
+            const regex = /\{[\w.]+\s*\.\s*(map|filter|forEach|reduce|some|every|find|findIndex)\s*\(\s*\(?\s*([^\)\s=>]+|\{[^}]+\})/
+            const match = trimpedChildren.match(regex)
+            if (match) {
+                const value = `${match.input?.substring(1)}> `
+                tokens.push({ type: TokenType.OPEN_CONTEXT, value });
+                continue;
+            }
+
             const hasEffect = signals && isReactive(trimpedChildren, signals)
-            const type = hasEffect ? TokenType.REACTIVE_CONTENT : isComputed ?  TokenType.COMPUTED_CONTENT : TokenType.CONTENT
+            const type = hasEffect ? TokenType.REACTIVE_CONTENT : isComputed ? TokenType.COMPUTED_CONTENT : TokenType.CONTENT
 
             tokens.push({ type, value: trimpedChildren });
             continue;
@@ -124,7 +134,14 @@ export function tokenize(jsx: string, signals: string[] = []): Token[] {
             const isComputed = newText !== text
 
             if (isComputed) {
+
                 tokens.push({ type: TokenType.COMPUTED_CONTENT, value: text });
+                continue;
+            }
+
+
+            if (text === '))}') {
+                tokens.push({ type: TokenType.CLOSE_CONTEXT, value: text })
                 continue;
             }
 
