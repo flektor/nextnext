@@ -1,8 +1,7 @@
 import { Calculator } from "./Calculator.jsx"
 import { Button } from "./components/Button.jsx"
-import { MenuPage } from "./components/MenuPage.jsx"
 
-export function Home() {
+export function Examples() {
   const [count, setCount] = createSignal(1)
   const [doubleCount, setDoubleCount] = createSignal(count() * 2)
 
